@@ -19,3 +19,6 @@ Rep Associates (multiple)
 - Rep's Email
 
 ## Other Features
+- Shortcode Generator
+- Rep Group and Rep Associates Excel Import/Export
+
