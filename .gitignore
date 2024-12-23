@@ -1,0 +1,25 @@
+# Development files
+.DS_Store
+.idea/
+.vscode/
+*.log
+*.bak
+*.swp
+*.zip
+
+# Composer
+/vendor/*
+!/vendor/composer/
+!/vendor/autoload.php
+!/vendor/phpoffice/
+
+# Exclude composer.lock for plugins
+# This ensures users get the latest compatible versions
+composer.lock
+
+# Node modules if you add any JS build process later
+node_modules/
+
+# Test files
+phpunit.xml
+tests/ 
