@@ -3,7 +3,7 @@ Shortcode Generator to display the rep group custom post type and associated rep
 
 ## Inputs for user
 Rep Group
-- Rep Group Logo
+- Area Served
 - Rep Group Name
 - Rep Group Address
 - Rep Group Phone Number (if available)
