@@ -146,3 +146,71 @@ add_filter('the_content', function($content) {
     }
     return $content . render_rep_group(get_the_ID());
 });
+
+// Add the shortcode meta box
+add_action('add_meta_boxes', function() {
+    add_meta_box(
+        'rep-group-shortcode',
+        'Rep Group Shortcode',
+        'render_shortcode_meta_box',
+        'rep-group',
+        'side',
+        'high'
+    );
+});
+
+/**
+ * Render the shortcode meta box
+ */
+function render_shortcode_meta_box($post) {
+    $shortcode = sprintf('[rep_group id="%d"]', $post->ID);
+    ?>
+    <div class="rep-group-shortcode" title="Click to copy shortcode">
+        <?php echo esc_html($shortcode); ?>
+    </div>
+    <div class="shortcode-copied">Shortcode copied to clipboard!</div>
+    <?php
+}
+
+// Add shortcode column to admin list
+add_filter('manage_rep-group_posts_columns', function($columns) {
+    $columns['shortcode'] = 'Shortcode';
+    return $columns;
+});
+
+// Display shortcode in admin column
+add_action('manage_rep-group_posts_custom_column', function($column, $post_id) {
+    if ($column === 'shortcode') {
+        $shortcode = sprintf('[rep_group id="%d"]', $post_id);
+        printf(
+            '<div class="rep-group-shortcode" title="Click to copy shortcode">%s</div>
+            <div class="shortcode-copied">Shortcode copied to clipboard!</div>',
+            esc_html($shortcode)
+        );
+    }
+}, 10, 2);
+
+// Enqueue admin assets
+add_action('admin_enqueue_scripts', function($hook) {
+    $screen = get_current_screen();
+    
+    // Only load on rep-group post type screens
+    if ($screen && ($screen->post_type === 'rep-group')) {
+        // Enqueue CSS
+        wp_enqueue_style(
+            'rep-group-admin',
+            plugins_url('assets/css/admin.css', __FILE__),
+            [],
+            '1.0.0'
+        );
+        
+        // Enqueue JavaScript
+        wp_enqueue_script(
+            'rep-group-admin',
+            plugins_url('assets/js/admin.js', __FILE__),
+            [],
+            '1.0.0',
+            true
+        );
+    }
+});

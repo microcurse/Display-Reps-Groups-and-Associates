@@ -1,0 +1,48 @@
+/* Shortcode Meta Box and Column Styles */
+.rep-group-shortcode {
+    background: #f0f0f1;
+    padding: 8px 12px;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    font-family: Consolas, Monaco, monospace;
+    cursor: pointer;
+    margin: 5px 0;
+    font-size: 13px;
+    transition: background-color 0.2s ease;
+    user-select: all; /* Makes the text selectable */
+}
+
+.rep-group-shortcode:hover {
+    background: #e0e0e1;
+}
+
+.rep-group-shortcode:active {
+    background: #d0d0d1;
+}
+
+/* Column width in admin list */
+.column-shortcode {
+    width: 25%;
+}
+
+/* Copy feedback message */
+.shortcode-copied {
+    color: #008a20;
+    display: none;
+    margin-top: 5px;
+    padding: 4px 0;
+    font-style: italic;
+    font-size: 12px;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+    .column-shortcode {
+        width: auto;
+    }
+    
+    .rep-group-shortcode {
+        padding: 12px;
+        font-size: 14px;
+    }
+}
