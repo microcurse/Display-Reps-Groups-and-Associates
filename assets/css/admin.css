@@ -9,7 +9,7 @@
     margin: 5px 0;
     font-size: 13px;
     transition: background-color 0.2s ease;
-    user-select: all; /* Makes the text selectable */
+    user-select: all;
 }
 
 .rep-group-shortcode:hover {
