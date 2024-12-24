@@ -4,8 +4,13 @@
  * Description: A plugin to display Rep Group information.
  * Version: 2.1.0
  * Author: Marc Maninang
- * Update URI: https://github.com/microcurse/reps-post-types
- * GitHub Plugin URI: https://github.com/microcurse/reps-post-types
+ * Plugin URI: https://github.com/yourusername/rep-group-plugin
+ * GitHub Plugin URI: https://github.com/yourusername/rep-group-plugin
+ * Primary Branch: main
+ * Release Branch: main
+ * Requires at least: 5.0
+ * Requires PHP: 7.4
+ * Update URI: https://github.com/yourusername/rep-group-plugin
  */
 
 // If this file is called directly, abort.
