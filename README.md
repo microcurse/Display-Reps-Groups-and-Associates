@@ -18,7 +18,32 @@ Rep Associates (multiple)
 -- When displayed on the front end, display the type of number it is before the number.
 - Rep's Email
 
-## Other Features
-- Shortcode Generator
-- Rep Group and Rep Associates Excel Import/Export
+## Usage
 
+### Shortcode
+Use the shortcode with a rep group ID to display information: [rep_group id="123"]
+
+### Import/Export
+1. Navigate to Rep Groups → Import/Export
+2. Use the Export button to download current rep groups
+3. Use the Import feature to update or add new rep groups
+
+## Requirements
+
+- WordPress 5.0 or higher
+- PHP 7.4 or higher
+- Advanced Custom Fields Pro plugin
+
+## Changelog
+
+### 2.0.0
+- Added card-based layout for rep associates
+- Improved import/export functionality
+- Added proper styling and organization
+- Removed author display
+- Added GitHub integration
+
+### 1.0.0
+- Initial release
+- Basic rep group functionality
+- Import/Export capabilities
