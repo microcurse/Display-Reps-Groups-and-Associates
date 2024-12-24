@@ -1,4 +1,4 @@
-# reps-post-types
+# Display Rep Groups and Associates
 Shortcode Generator to display the rep group custom post type and associated reps. Custom Post type is built in ACF along with Field Groups for for inputs.
 
 ## Inputs for user
