@@ -36,6 +36,13 @@ Use the shortcode with a rep group ID to display information: [rep_group id="123
 
 ## Changelog
 
+### 2.1.0
+- Added archive page template
+- Added card-based layout for rep associates
+- Added image featured image support for rep groups
+- Added proper styling and organization
+- Removed author display
+
 ### 2.0.0
 - Added card-based layout for rep associates
 - Improved import/export functionality

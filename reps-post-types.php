@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Display Rep Groups and Associates
  * Description: A plugin to display Rep Group information.
- * Version: 2.0.0
+ * Version: 2.1.0
  * Author: Marc Maninang
  * Update URI: https://github.com/microcurse/reps-post-types
  * GitHub Plugin URI: https://github.com/microcurse/reps-post-types

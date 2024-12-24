@@ -8,6 +8,7 @@ class Post_Type {
         add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_assets']);
         add_action('admin_menu', [$this, 'remove_author_metabox']);
         add_filter('post_row_actions', [$this, 'modify_list_row_actions'], 10, 2);
+        add_filter('archive_template', [$this, 'load_archive_template']);
     }
 
     public function register_post_type() {
@@ -29,7 +30,7 @@ class Post_Type {
             'public' => true,
             'has_archive' => true,
             'show_in_menu' => true,
-            'supports' => ['title'],
+            'supports' => ['title', 'thumbnail'],
             'menu_icon' => 'dashicons-groups',
             'show_in_rest' => false,
         ]);
@@ -74,5 +75,15 @@ class Post_Type {
             [],
             REP_GROUP_VERSION
         );
+    }
+
+    public function load_archive_template($template) {
+        if (is_post_type_archive('rep-group')) {
+            $custom_template = REP_GROUP_PLUGIN_PATH . 'templates/archive-rep-group.php';
+            if (file_exists($custom_template)) {
+                return $custom_template;
+            }
+        }
+        return $template;
     }
 } 
