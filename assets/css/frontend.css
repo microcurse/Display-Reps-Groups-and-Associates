@@ -1,0 +1,96 @@
+/* Hide author information - specific to block theme */
+.single-rep-group .wp-block-post-author-name,
+.single-rep-group .wp-block-group.has-accent-4-color.is-layout-flex {
+    display: none !important;
+}
+
+/* Existing styles */
+.rep-group {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.area-served,
+.address {
+    margin-bottom: 2rem;
+}
+
+.address-content {
+    margin-top: 0.5rem;
+}
+
+.address-content p {
+    margin: 0.25rem 0;
+}
+
+.rep-section-title {
+    font-size: 1.75rem;
+    margin: 2rem 0 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #eee;
+}
+
+.rep-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.rep-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rep-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.rep-name {
+    font-size: 1.25rem;
+    margin: 0 0 1rem;
+    color: #2c3338;
+}
+
+.rep-territory {
+    margin-bottom: 1rem;
+    color: #50575e;
+}
+
+.rep-contact-info {
+    border-top: 1px solid #eee;
+    margin-top: 1rem;
+    padding-top: 1rem;
+}
+
+.rep-contact-info p {
+    margin: 0.5rem 0;
+}
+
+.rep-contact-info a {
+    color: #0073aa;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.rep-contact-info a:hover {
+    color: #00a0d2;
+    text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .rep-card-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .rep-card {
+        padding: 1rem;
+    }
+} 
