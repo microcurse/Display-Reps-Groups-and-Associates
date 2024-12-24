@@ -1,6 +1,7 @@
 /* Hide author information - specific to block theme */
 .single-rep-group .wp-block-post-author-name,
-.single-rep-group .wp-block-group.has-accent-4-color.is-layout-flex {
+.single-rep-group .wp-block-group.has-accent-4-color.is-layout-flex,
+.single-rep-group .entry-meta {
     display: none !important;
 }
 

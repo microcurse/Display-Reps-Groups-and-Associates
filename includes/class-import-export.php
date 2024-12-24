@@ -6,6 +6,7 @@ class Import_Export {
         add_action('admin_menu', [$this, 'add_import_export_page']);
         add_action('admin_post_export_rep_groups', [$this, 'handle_export']);
         add_action('admin_post_import_rep_groups', [$this, 'handle_import']);
+        add_action('admin_post_download_rep_group_template', [$this, 'handle_template_download']);
         add_action('admin_notices', [$this, 'display_import_notices']);
     }
 
@@ -300,6 +301,75 @@ class Import_Export {
             ['page' => 'rep-group-import-export'],
             admin_url('edit.php?post_type=rep-group')
         ));
+        exit;
+    }
+
+    public function handle_template_download() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+
+        require_once REP_GROUP_PLUGIN_PATH . 'vendor/autoload.php';
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Set headers
+        $headers = [
+            'Post ID',
+            'Title',
+            'Area Served',
+            'Address 1',
+            'Address 2',
+            'City',
+            'State',
+            'Zip Code',
+            'Rep Name',
+            'Territory',
+            'Phone Type',
+            'Phone Number',
+            'Email'
+        ];
+        $sheet->fromArray([$headers], NULL, 'A1');
+
+        // Add example row
+        $example = [
+            '',  // Post ID (leave blank for new entries)
+            'Example Rep Group',
+            'Northeast Region',
+            '123 Main St',
+            'Suite 100',
+            'Boston',
+            'MA',
+            '02108',
+            'John Smith',
+            'Greater Boston Area',
+            'Office',
+            '555-123-4567',
+            'john@example.com'
+        ];
+        $sheet->fromArray([$example], NULL, 'A2');
+
+        // Auto-size columns
+        foreach (range('A', 'M') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Create Excel file
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        
+        // Clean any output buffers
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+        
+        // Set headers for download
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="rep-groups-template.xlsx"');
+        header('Cache-Control: max-age=0');
+        
+        // Save to output
+        $writer->save('php://output');
         exit;
     }
 
