@@ -4,8 +4,8 @@
  * Description: A plugin to display Rep Group information using a shortcode.
  * Version: 2.0.0
  * Author: Marc Maninang
- * Update URI: https://github.com/yourusername/rep-group-plugin
- * GitHub Plugin URI: https://github.com/yourusername/rep-group-plugin
+ * Update URI: https://github.com/microcurse/reps-post-types
+ * GitHub Plugin URI: https://github.com/microcurse/reps-post-types
  */
 
 // If this file is called directly, abort.
