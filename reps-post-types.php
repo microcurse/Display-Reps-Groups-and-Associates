@@ -47,11 +47,13 @@ require_once REP_GROUP_PLUGIN_PATH . 'includes/class-import-export.php';
 require_once REP_GROUP_PLUGIN_PATH . 'includes/class-shortcode.php';
 require_once REP_GROUP_PLUGIN_PATH . 'includes/class-renderer.php';
 require_once REP_GROUP_PLUGIN_PATH . 'includes/class-post-type.php';
+require_once REP_GROUP_PLUGIN_PATH . 'includes/class-map-manager.php';
 
 // Initialize plugin
 function init_rep_group_plugin() {
     new RepGroup\Import_Export();
     new RepGroup\Shortcode();
     new RepGroup\Post_Type();
+    new RepGroup\Map_Manager();
 }
 add_action('plugins_loaded', 'init_rep_group_plugin');
