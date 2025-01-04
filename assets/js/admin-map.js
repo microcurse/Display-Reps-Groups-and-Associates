@@ -84,8 +84,7 @@ jQuery(document).ready(function($) {
             state.selectedState = pathId;
             this.updateRegionColor($path, $parent, config.colors.selected);
             
-            // Update UI
-            $(config.selectors.selectedState).text(pathId);
+            // We'll get the proper name after fetching assignments
             this.fetchStateAssignments(pathId);
         },
 
@@ -116,9 +115,13 @@ jQuery(document).ready(function($) {
                 },
                 success: function(response) {
                     if (response.success) {
+                        // Update the select with rep groups
                         $(config.selectors.repGroupSelect)
                             .val(response.data.rep_groups)
                             .trigger('change');
+                        
+                        // Update UI with the term name from the response
+                        $(config.selectors.selectedState).text(response.data.state_name);
                     }
                 }
             });

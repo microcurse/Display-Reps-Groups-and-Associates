@@ -447,16 +447,19 @@ class Post_Type {
         }
         
         $state = sanitize_text_field($_POST['state']);
-        $state_code = str_replace('US-', '', $state);
         
+        // Get the term based on SVG ID
+        $term = $this->get_term_by_svg_id($state);
+        
+        // Get rep groups
         $args = [
             'post_type' => 'rep-group',
             'posts_per_page' => -1,
             'tax_query' => [
                 [
                     'taxonomy' => 'area-served',
-                    'field' => 'slug',
-                    'terms' => $state_code
+                    'field' => 'term_id',
+                    'terms' => $term ? $term->term_id : 0
                 ]
             ]
         ];
@@ -466,7 +469,10 @@ class Post_Type {
             return $group->ID;
         }, $rep_groups);
         
-        wp_send_json_success(['rep_groups' => $group_ids]);
+        wp_send_json_success([
+            'rep_groups' => $group_ids,
+            'state_name' => $term ? $term->name : $state // Send back the term name
+        ]);
     }
 
     public function update_map_svg() {
