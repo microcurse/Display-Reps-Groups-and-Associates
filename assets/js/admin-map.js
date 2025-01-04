@@ -1,125 +1,187 @@
 jQuery(document).ready(function($) {
     console.log('Admin map JS loaded');
 
-    // Core variables
-    const defaultColor = '#D8D8D8';
-    const selectedColor = '#0073aa';
-    let selectedState = null;
-    let mediaUploader = null;
+    // Configuration object
+    const config = {
+        colors: {
+            default: '#D8D8D8',
+            selected: '#0073aa'
+        },
+        selectors: {
+            svg: 'svg',
+            mapControls: '#map-controls',
+            selectedState: '#selected-state',
+            repGroupSelect: '#rep-group-select',
+            uploadButton: '#upload-map-svg',
+            removeButton: '#remove-map-svg'
+        }
+    };
 
-    // Initialize map
-    function initializeMap() {
-        // Reset all paths to default color
-        $('svg path').css('fill', defaultColor);
+    // State management
+    const state = {
+        selectedState: null,
+        mediaUploader: null
+    };
 
-        // Find individual paths first
-        const $individualPaths = $('svg path[id^="US-"], svg path[id^="CA-"]');
-        
-        // Find grouped paths
-        const $groupedPaths = $('svg g[id^="US-"] path, svg g[id^="CA-"] path');
-        
-        // Combine all paths
-        const $allPaths = $individualPaths.add($groupedPaths);
+    // Map functionality
+    const MapManager = {
+        init() {
+            this.resetColors();
+            this.initializeRegions();
+        },
 
-        $allPaths.each(function() {
-            const $path = $(this);
+        resetColors() {
+            $(config.selectors.svg + ' path').css('fill', config.colors.default);
+        },
+
+        initializeRegions() {
+            const $paths = this.getAllRegionPaths();
+            $paths.each((_, path) => this.setupRegion($(path)));
+        },
+
+        getAllRegionPaths() {
+            const $individualPaths = $('svg path[id^="US-"], svg path[id^="CA-"]');
+            const $groupedPaths = $('svg g[id^="US-"] path, svg g[id^="CA-"] path');
+            return $individualPaths.add($groupedPaths);
+        },
+
+        setupRegion($path) {
             const $parent = $path.parent('g');
             const pathId = $parent.is('g[id^="US-"], g[id^="CA-"]') ? $parent.attr('id') : $path.attr('id');
 
-            // Skip if no valid ID found
-            if (!pathId) return;
+            if (!this.isValidRegion(pathId)) return;
 
-            // Skip separators and landmarks
-            if (pathId.toLowerCase().includes('separator') || 
-                pathId.toLowerCase().includes('landmarks')) {
+            $path.css('cursor', 'pointer')
+                .on('mouseenter', (e) => this.handleHover(e, $path, $parent, pathId, true))
+                .on('mouseleave', (e) => this.handleHover(e, $path, $parent, pathId, false))
+                .on('click', (e) => this.handleClick(e, $path, $parent, pathId));
+        },
+
+        isValidRegion(pathId) {
+            return pathId && 
+                   !pathId.toLowerCase().includes('separator') && 
+                   !pathId.toLowerCase().includes('landmarks');
+        },
+
+        handleHover(e, $path, $parent, pathId, isEntering) {
+            e.stopPropagation();
+            if (pathId !== state.selectedState) {
+                const color = isEntering ? config.colors.selected : config.colors.default;
+                this.updateRegionColor($path, $parent, color);
+            }
+        },
+
+        handleClick(e, $path, $parent, pathId) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Reset previous selection
+            if (state.selectedState) {
+                this.resetRegion($(`#${state.selectedState}`));
+            }
+
+            // Update selection
+            state.selectedState = pathId;
+            this.updateRegionColor($path, $parent, config.colors.selected);
+            
+            // Update UI
+            $(config.selectors.selectedState).text(pathId);
+            this.fetchStateAssignments(pathId);
+        },
+
+        updateRegionColor($path, $parent, color) {
+            if ($parent.is('g[id^="US-"], g[id^="CA-"]')) {
+                $parent.find('path').css('fill', color);
+            } else {
+                $path.css('fill', color);
+            }
+        },
+
+        resetRegion($region) {
+            if ($region.is('g')) {
+                $region.find('path').css('fill', config.colors.default);
+            } else {
+                $region.css('fill', config.colors.default);
+            }
+        },
+
+        fetchStateAssignments(stateId) {
+            $.ajax({
+                url: repGroupsAdmin.ajaxurl,
+                method: 'POST',
+                data: {
+                    action: 'get_state_rep_groups_admin',
+                    nonce: repGroupsAdmin.nonce,
+                    state: stateId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $(config.selectors.repGroupSelect)
+                            .val(response.data.rep_groups)
+                            .trigger('change');
+                    }
+                }
+            });
+        }
+    };
+
+    // Media management
+    const MediaManager = {
+        init() {
+            this.bindEvents();
+        },
+
+        bindEvents() {
+            $(config.selectors.uploadButton).on('click', (e) => this.handleUpload(e));
+            $(config.selectors.removeButton).on('click', (e) => this.handleRemove(e));
+        },
+
+        handleUpload(e) {
+            e.preventDefault();
+            
+            if (!this.isMediaLibraryAvailable()) return;
+            
+            if (state.mediaUploader) {
+                state.mediaUploader.open();
                 return;
             }
 
-            // Make path clickable
-            $path.css('cursor', 'pointer');
+            this.createMediaUploader();
+        },
 
-            // Hover handlers
-            $path.on('mouseenter', function(e) {
-                e.stopPropagation();
-                if (pathId !== selectedState) {
-                    if ($parent.is('g[id^="US-"], g[id^="CA-"]')) {
-                        $parent.find('path').css('fill', selectedColor);
-                    } else {
-                        $path.css('fill', selectedColor);
-                    }
-                }
-            }).on('mouseleave', function(e) {
-                e.stopPropagation();
-                if (pathId !== selectedState) {
-                    if ($parent.is('g[id^="US-"], g[id^="CA-"]')) {
-                        $parent.find('path').css('fill', defaultColor);
-                    } else {
-                        $path.css('fill', defaultColor);
-                    }
-                }
+        isMediaLibraryAvailable() {
+            if (typeof wp === 'undefined' || typeof wp.media === 'undefined') {
+                console.error('WordPress Media Library not available');
+                return false;
+            }
+            return true;
+        },
+
+        createMediaUploader() {
+            state.mediaUploader = wp.media({
+                title: 'Select SVG Map',
+                button: { text: 'Use this map' },
+                multiple: false,
+                library: { type: ['image/svg+xml'] }
             });
 
-            // Click handler
-            $path.on('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
+            state.mediaUploader.on('select', () => this.handleMediaSelection());
+            state.mediaUploader.open();
+        },
 
-                // Reset previous selection
-                if (selectedState) {
-                    const $prevRegion = $(`#${selectedState}`);
-                    if ($prevRegion.is('g')) {
-                        $prevRegion.find('path').css('fill', defaultColor);
-                    } else {
-                        $prevRegion.css('fill', defaultColor);
-                    }
-                }
+        handleMediaSelection() {
+            const attachment = state.mediaUploader.state().get('selection').first().toJSON();
+            this.updateMapSvg(attachment.id);
+        },
 
-                // Update selection
-                selectedState = pathId;
-                if ($parent.is('g[id^="US-"], g[id^="CA-"]')) {
-                    $parent.find('path').css('fill', selectedColor);
-                } else {
-                    $path.css('fill', selectedColor);
-                }
-
-                // Update UI
-                $('#selected-state').text(pathId);
-                fetchStateAssignments(pathId);
-            });
-        });
-    }
-
-    // Media uploader button
-    $('#upload-map-svg').on('click', function(e) {
-        e.preventDefault();
-        
-        if (typeof wp === 'undefined' || typeof wp.media === 'undefined') {
-            console.error('WordPress Media Library not available');
-            return;
-        }
-        
-        if (mediaUploader) {
-            mediaUploader.open();
-            return;
-        }
-        
-        mediaUploader = wp.media({
-            title: 'Select SVG Map',
-            button: { text: 'Use this map' },
-            multiple: false,
-            library: { type: ['image/svg+xml'] }
-        });
-
-        mediaUploader.on('select', function() {
-            const attachment = mediaUploader.state().get('selection').first().toJSON();
-            
+        updateMapSvg(attachmentId) {
             $.ajax({
                 url: repGroupsAdmin.ajaxurl,
                 method: 'POST',
                 data: {
                     action: 'update_map_svg',
                     nonce: repGroupsAdmin.nonce,
-                    attachment_id: attachment.id
+                    attachment_id: attachmentId
                 },
                 success: function(response) {
                     if (response.success) {
@@ -132,15 +194,16 @@ jQuery(document).ready(function($) {
                     alert('Error updating map: ' + error);
                 }
             });
-        });
+        },
 
-        mediaUploader.open();
-    });
+        handleRemove(e) {
+            e.preventDefault();
+            if (confirm('Are you sure you want to remove the current map?')) {
+                this.removeMapSvg();
+            }
+        },
 
-    // Remove map button
-    $('#remove-map-svg').on('click', function(e) {
-        e.preventDefault();
-        if (confirm('Are you sure you want to remove the current map?')) {
+        removeMapSvg() {
             $.ajax({
                 url: repGroupsAdmin.ajaxurl,
                 method: 'POST',
@@ -157,25 +220,9 @@ jQuery(document).ready(function($) {
                 }
             });
         }
-    });
+    };
 
-    function fetchStateAssignments(stateId) {
-        $.ajax({
-            url: repGroupsAdmin.ajaxurl,
-            method: 'POST',
-            data: {
-                action: 'get_state_rep_groups_admin',
-                nonce: repGroupsAdmin.nonce,
-                state: stateId
-            },
-            success: function(response) {
-                if (response.success) {
-                    $('#rep-group-select').val(response.data.rep_groups).trigger('change');
-                }
-            }
-        });
-    }
-
-    // Initialize the map
-    initializeMap();
+    // Initialize everything
+    MapManager.init();
+    MediaManager.init();
 }); 
