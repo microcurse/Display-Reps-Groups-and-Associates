@@ -1,0 +1,70 @@
+.map-manager-container {
+    display: flex;
+    gap: 2em;
+    margin-top: 2em;
+}
+
+.map-preview {
+    flex: 2;
+    border: 1px solid #ccc;
+    padding: 1em;
+    background: #fff;
+}
+
+.map-preview svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.map-controls {
+    flex: 1;
+    min-width: 300px;
+}
+
+#state-info {
+    background: #fff;
+    padding: 1em;
+    border: 1px solid #ccc;
+}
+
+path[id] {
+    cursor: pointer;
+    pointer-events: auto;
+    transition: opacity 0.3s ease;
+}
+
+path[id].active {
+    fill: #0073aa;
+}
+
+#rep-group-selector {
+    margin-top: 1em;
+}
+
+#save-state-mapping {
+    margin-top: 1em;
+    width: 100%;
+}
+
+.select2-container {
+    width: 100% !important;
+}
+
+.map-upload-section {
+    margin: 2em 0;
+    padding: 1em;
+    background: #fff;
+    border: 1px solid #ccc;
+}
+
+.no-map-message {
+    margin-bottom: 1em;
+    padding: 1em;
+    background: #f8f8f8;
+    border-left: 4px solid #646970;
+}
+
+#remove-map-svg {
+    margin-left: 1em;
+    color: #dc3232;
+} 

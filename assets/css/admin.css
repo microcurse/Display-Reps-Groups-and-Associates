@@ -46,3 +46,19 @@
         font-size: 14px;
     }
 }
+
+.color-picker-wrapper {
+    margin-bottom: 15px;
+}
+
+.color-picker-wrapper label {
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+.color-picker-wrapper input[type="color"] {
+    padding: 0;
+    width: 50px;
+    height: 30px;
+    vertical-align: middle;
+}

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Display Rep Groups and Associates
  * Description: A plugin to display Rep Group information.
- * Version: 2.1.0
+ * Version: 2.1.1
  * Author: Marc Maninang
  * Plugin URI: https://github.com/yourusername/rep-group-plugin
  * GitHub Plugin URI: https://github.com/yourusername/rep-group-plugin
