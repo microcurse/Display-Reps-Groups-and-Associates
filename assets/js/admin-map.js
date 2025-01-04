@@ -225,6 +225,14 @@ jQuery(document).ready(function($) {
         }
     };
 
+    // Initialize Select2
+    $(config.selectors.repGroupSelect).select2({
+        width: '100%',
+        placeholder: 'Select rep groups',
+        allowClear: true,
+        closeOnSelect: false
+    });
+
     // Initialize everything
     MapManager.init();
     MediaManager.init();
