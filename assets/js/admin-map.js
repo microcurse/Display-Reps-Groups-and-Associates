@@ -5,7 +5,8 @@ jQuery(document).ready(function($) {
     const config = {
         colors: {
             default: '#D8D8D8',
-            selected: '#0073aa'
+            selected: '#0073aa',
+            hasAssignment: '#46b450'
         },
         selectors: {
             svg: 'svg',
@@ -13,7 +14,8 @@ jQuery(document).ready(function($) {
             selectedState: '#selected-state',
             repGroupSelect: '#rep-group-select',
             uploadButton: '#upload-map-svg',
-            removeButton: '#remove-map-svg'
+            removeButton: '#remove-map-svg',
+            saveButton: '#save-state-mapping'
         }
     };
 
@@ -28,6 +30,12 @@ jQuery(document).ready(function($) {
         init() {
             this.resetColors();
             this.initializeRegions();
+            this.bindEvents();
+            this.initializeMapStates();
+        },
+
+        bindEvents() {
+            $(config.selectors.saveButton).on('click', (e) => this.handleSave(e));
         },
 
         resetColors() {
@@ -66,7 +74,8 @@ jQuery(document).ready(function($) {
         handleHover(e, $path, $parent, pathId, isEntering) {
             e.stopPropagation();
             if (pathId !== state.selectedState) {
-                const color = isEntering ? config.colors.selected : config.colors.default;
+                const color = isEntering ? config.colors.selected : 
+                    ($path.hasClass('has-assignment') ? config.colors.hasAssignment : config.colors.default);
                 this.updateRegionColor($path, $parent, color);
             }
         },
@@ -77,15 +86,57 @@ jQuery(document).ready(function($) {
 
             // Reset previous selection
             if (state.selectedState) {
-                this.resetRegion($(`#${state.selectedState}`));
+                const $prevRegion = $(`#${state.selectedState}`);
+                const prevColor = $prevRegion.hasClass('has-assignment') ? 
+                    config.colors.hasAssignment : config.colors.default;
+                this.updateRegionColor($prevRegion, $prevRegion.parent(), prevColor);
             }
 
             // Update selection
             state.selectedState = pathId;
             this.updateRegionColor($path, $parent, config.colors.selected);
             
-            // We'll get the proper name after fetching assignments
+            // Fetch assignments for this state
             this.fetchStateAssignments(pathId);
+        },
+
+        handleSave(e) {
+            e.preventDefault();
+            
+            if (!state.selectedState) {
+                alert('Please select a state first');
+                return;
+            }
+
+            const selectedGroups = $(config.selectors.repGroupSelect).val();
+
+            $.ajax({
+                url: repGroupsAdmin.ajaxurl,
+                method: 'POST',
+                data: {
+                    action: 'save_state_rep_groups',
+                    nonce: repGroupsAdmin.nonce,
+                    state: state.selectedState,
+                    rep_groups: JSON.stringify(selectedGroups)
+                },
+                success: (response) => {
+                    if (response.success) {
+                        const $region = $(`#${state.selectedState}`);
+                        if (selectedGroups && selectedGroups.length > 0) {
+                            $region.addClass('has-assignment');
+                        } else {
+                            $region.removeClass('has-assignment');
+                        }
+                        alert('Assignments saved successfully');
+                    } else {
+                        alert('Error saving assignments');
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('Error saving assignments:', error);
+                    alert('Error saving assignments');
+                }
+            });
         },
 
         updateRegionColor($path, $parent, color) {
@@ -93,14 +144,6 @@ jQuery(document).ready(function($) {
                 $parent.find('path').css('fill', color);
             } else {
                 $path.css('fill', color);
-            }
-        },
-
-        resetRegion($region) {
-            if ($region.is('g')) {
-                $region.find('path').css('fill', config.colors.default);
-            } else {
-                $region.css('fill', config.colors.default);
             }
         },
 
@@ -115,13 +158,31 @@ jQuery(document).ready(function($) {
                 },
                 success: function(response) {
                     if (response.success) {
-                        // Update the select with rep groups
                         $(config.selectors.repGroupSelect)
                             .val(response.data.rep_groups)
                             .trigger('change');
                         
-                        // Update UI with the term name from the response
                         $(config.selectors.selectedState).text(response.data.state_name);
+                    }
+                }
+            });
+        },
+
+        initializeMapStates() {
+            $.ajax({
+                url: repGroupsAdmin.ajaxurl,
+                method: 'POST',
+                data: {
+                    action: 'get_all_state_assignments',
+                    nonce: repGroupsAdmin.nonce
+                },
+                success: (response) => {
+                    if (response.success && response.data.assignments) {
+                        Object.keys(response.data.assignments).forEach(stateId => {
+                            const $region = $(`#${stateId}`);
+                            $region.addClass('has-assignment');
+                            this.updateRegionColor($region, $region.parent(), config.colors.hasAssignment);
+                        });
                     }
                 }
             });

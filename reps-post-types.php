@@ -2,58 +2,54 @@
 /**
  * Plugin Name: Display Rep Groups and Associates
  * Description: A plugin to display Rep Group information.
- * Version: 2.1.1
+ * Version: 2.1.2
  * Author: Marc Maninang
- * Plugin URI: https://github.com/yourusername/rep-group-plugin
- * GitHub Plugin URI: https://github.com/yourusername/rep-group-plugin
+ * Plugin URI: https://github.com/microcurse/Display-Reps-Groups-and-Associates
+ * GitHub Plugin URI: https://github.com/microcurse/Display-Reps-Groups-and-Associates
  * Primary Branch: main
  * Release Branch: main
  * Requires at least: 5.0
  * Requires PHP: 7.4
- * Update URI: https://github.com/yourusername/rep-group-plugin
+ * Update URI: https://github.com/microcurse/Display-Reps-Groups-and-Associates
  */
 
-// If this file is called directly, abort.
-if (!defined('WPINC')) {
-    die;
-}
+ namespace RepGroup;
 
-// Define plugin constants
-define('REP_GROUP_PLUGIN_PATH', plugin_dir_path(__FILE__));
-define('REP_GROUP_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('REP_GROUP_VERSION', '2.0.0');
-
-// Activation/Deactivation hooks
-register_activation_hook(__FILE__, function() {
-    // Get old version if it exists
-    $old_version = get_option('rep_group_version', '0');
-    
-    // If this is a new installation or update
-    if (version_compare($old_version, REP_GROUP_VERSION, '<')) {
-        // Update the version in the database
-        update_option('rep_group_version', REP_GROUP_VERSION);
-        
-        // Clear any caches
-        flush_rewrite_rules();
-    }
-});
-
-register_deactivation_hook(__FILE__, function() {
-    flush_rewrite_rules();
-});
-
-// Require files
-require_once REP_GROUP_PLUGIN_PATH . 'includes/class-import-export.php';
-require_once REP_GROUP_PLUGIN_PATH . 'includes/class-shortcode.php';
-require_once REP_GROUP_PLUGIN_PATH . 'includes/class-renderer.php';
-require_once REP_GROUP_PLUGIN_PATH . 'includes/class-post-type.php';
-require_once REP_GROUP_PLUGIN_PATH . 'includes/class-map-manager.php';
-
-// Initialize plugin
-function init_rep_group_plugin() {
-    new RepGroup\Import_Export();
-    new RepGroup\Shortcode();
-    new RepGroup\Post_Type();
-    new RepGroup\Map_Manager();
-}
-add_action('plugins_loaded', 'init_rep_group_plugin');
+ // Prevent direct access
+ if (!defined('ABSPATH')) {
+     exit;
+ }
+ 
+ // Define plugin constants
+ define('REP_GROUP_VERSION', '1.0.0');
+ define('REP_GROUP_PATH', plugin_dir_path(__FILE__));
+ define('REP_GROUP_URL', plugin_dir_url(__FILE__));
+ 
+ // Autoload classes
+ spl_autoload_register(function ($class) {
+     // Check if the class is in our namespace
+     if (strpos($class, 'RepGroup\\') !== 0) {
+         return;
+     }
+ 
+     // Remove namespace from class name
+     $class_name = str_replace('RepGroup\\', '', $class);
+     
+     // Convert class name format to file name format
+     $file_name = 'class-' . strtolower(str_replace('_', '-', $class_name)) . '.php';
+     
+     // Build file path
+     $file_path = REP_GROUP_PATH . 'includes/' . $file_name;
+     
+     // Include file if it exists
+     if (file_exists($file_path)) {
+         require_once $file_path;
+     }
+ });
+ 
+ // Initialize plugin
+ function init_rep_group_plugin() {
+     $plugin = new Rep_Group();
+ }
+ 
+ add_action('plugins_loaded', 'RepGroup\\init_rep_group_plugin');

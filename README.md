@@ -36,6 +36,15 @@ Use the shortcode with a rep group ID to display information: [rep_group id="123
 
 ## Changelog
 
+### 2.1.2
+- Updated map manager
+- Added SVG map upload and management
+- Added state assignment functionality
+- Added proper styling and organization
+
+### 2.1.1
+- Added map manager
+
 ### 2.1.0
 - Added archive page template
 - Added card-based layout for rep associates

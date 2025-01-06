@@ -22,7 +22,63 @@ class Import_Export {
     }
 
     public function render_import_export_page() {
-        require_once REP_GROUP_PLUGIN_PATH . 'templates/import-export-page.php';
+        ?>
+        <div class="wrap">
+            <h1>Import/Export Rep Groups</h1>
+
+            <!-- Export Section -->
+            <div class="card">
+                <h2>Export</h2>
+                <p>Download all rep groups as an Excel file.</p>
+                <form method="post" action="<?php echo admin_url('admin-post.php'); ?>">
+                    <?php wp_nonce_field('export_rep_groups', 'export_nonce'); ?>
+                    <input type="hidden" name="action" value="export_rep_groups">
+                    <button type="submit" class="button button-primary">Export Rep Groups</button>
+                </form>
+            </div>
+
+            <!-- Template Download Section -->
+            <div class="card">
+                <h2>Download Template</h2>
+                <p>Download an Excel template for importing rep groups.</p>
+                <form method="post" action="<?php echo admin_url('admin-post.php'); ?>">
+                    <?php wp_nonce_field('download_rep_group_template', 'template_nonce'); ?>
+                    <input type="hidden" name="action" value="download_rep_group_template">
+                    <button type="submit" class="button button-secondary">Download Template</button>
+                </form>
+            </div>
+
+            <!-- Import Section -->
+            <div class="card">
+                <h2>Import</h2>
+                <p>Import rep groups from an Excel file. Please use the template provided above.</p>
+                <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" enctype="multipart/form-data">
+                    <?php wp_nonce_field('import_rep_groups', 'import_nonce'); ?>
+                    <input type="hidden" name="action" value="import_rep_groups">
+                    <input type="file" name="import_file" accept=".xlsx,.xls" required>
+                    <p class="submit">
+                        <button type="submit" class="button button-primary">Import Rep Groups</button>
+                    </p>
+                </form>
+            </div>
+        </div>
+
+        <style>
+            .card {
+                background: #fff;
+                border: 1px solid #ccd0d4;
+                padding: 20px;
+                margin-top: 20px;
+                box-shadow: 0 1px 1px rgba(0,0,0,.04);
+            }
+            .card h2 {
+                margin-top: 0;
+            }
+            form {
+                margin: 15px 0;
+            }
+        </style>
+        <?php
     }
 
     public function handle_export() {
