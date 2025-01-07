@@ -172,4 +172,130 @@
 .rep-contact-info a:hover {
     color: #00a0d2;
     text-decoration: underline;
-} 
+}
+
+/* Rep Group Archive Styles */
+.rep-groups-archive {
+    padding: 2rem 0;
+}
+
+.rep-group-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    margin: 0 auto;
+    max-width: 1200px;
+    padding: 0 1rem;
+}
+
+.rep-group-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.2s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.rep-group-card:hover {
+    transform: translateY(-5px);
+}
+
+.rep-group-logo {
+    height: 200px;
+    overflow: hidden;
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rep-group-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 1rem;
+}
+
+.rep-group-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+}
+
+.rep-group-placeholder .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: #ccc;
+}
+
+.rep-group-content {
+    padding: 1.5rem;
+}
+
+.rep-group-title {
+    margin: 0 0 1rem;
+    font-size: 1.5rem;
+    line-height: 1.3;
+}
+
+.rep-group-title a {
+    color: #333;
+    text-decoration: none;
+}
+
+.rep-group-title a:hover {
+    color: #0073aa;
+}
+
+.rep-group-areas {
+    margin-bottom: 1.5rem;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.rep-group-link {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: #0073aa;
+    color: white !important;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+    text-align: center;
+    font-weight: 500;
+}
+
+.rep-group-link:hover {
+    background: #005177;
+}
+
+/* Hide WordPress default elements */
+.rep-group-card .entry-meta,
+.rep-group-card .entry-footer,
+.rep-group-card .post-date,
+.rep-group-card .post-author {
+    display: none !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .rep-group-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+    
+    .rep-group-logo {
+        height: 150px;
+    }
+}
+
+.no-rep-groups {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}

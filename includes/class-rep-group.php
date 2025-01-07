@@ -3,9 +3,7 @@ namespace RepGroup;
 
 class Rep_Group {
     private $post_type;
-    private $map_manager;
     private $asset_manager;
-    private $taxonomy_manager;
     private $shortcode;
     private $import_export;
 
@@ -15,9 +13,7 @@ class Rep_Group {
 
     private function init_components() {
         $this->post_type = new Post_Type();
-        $this->map_manager = new Map_Manager();
         $this->asset_manager = new Asset_Manager();
-        $this->taxonomy_manager = new Taxonomy_Manager();
         $this->shortcode = new Shortcode();
         $this->import_export = new Import_Export();
     }

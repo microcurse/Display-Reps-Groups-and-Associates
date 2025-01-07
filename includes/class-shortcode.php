@@ -2,27 +2,8 @@
 namespace RepGroup;
 
 class Shortcode {
-    private $map_manager;
-
     public function __construct() {
-        $this->map_manager = new Map_Manager();
-        add_shortcode('rep_group_map', [$this, 'render_map_shortcode']);
         add_shortcode('rep_group_display', [$this, 'render_rep_group_display']);
-    }
-
-    /**
-     * Render the map shortcode
-     */
-    public function render_map_shortcode($atts) {
-        $map_svg_id = get_option('rep_group_map_svg_id');
-        
-        if (!$map_svg_id) {
-            return '<p>Map not configured. Please upload a map in the admin panel.</p>';
-        }
-        
-        ob_start();
-        require REP_GROUP_PATH . 'templates/frontend/map.php';
-        return ob_get_clean();
     }
 
     /**
@@ -30,9 +11,8 @@ class Shortcode {
      */
     public function render_rep_group_display($atts) {
         $attributes = shortcode_atts([
-            'state' => '',
-            'limit' => -1,
-            'id' => null // Added support for single rep group display
+            'id' => null,
+            'limit' => -1
         ], $atts);
 
         // If ID is provided, render single rep group
@@ -46,16 +26,6 @@ class Shortcode {
             'posts_per_page' => $attributes['limit']
         ];
 
-        if (!empty($attributes['state'])) {
-            $query_args['tax_query'] = [
-                [
-                    'taxonomy' => 'area-served',
-                    'field' => 'slug',
-                    'terms' => strtolower($attributes['state'])
-                ]
-            ];
-        }
-
         $rep_groups = new \WP_Query($query_args);
         
         ob_start();
@@ -64,23 +34,29 @@ class Shortcode {
     }
 
     /**
-     * Render a single rep group (moved from Renderer class)
+     * Render a single rep group
      */
     private function render_single_rep_group($post_id) {
+        // Debug output
+        error_log('Rendering rep group: ' . $post_id);
+        
         $output = '<section class="rep-group">';
         
-        // Area Served
-        $area_served = get_field('rg_area_served', $post_id);
-        if ($area_served) {
+        // Get Area Served from taxonomy
+        $areas = get_the_terms($post_id, 'area-served');
+        if ($areas && !is_wp_error($areas)) {
             $output .= '<div class="area-served">';
             $output .= '<strong>Area Served:</strong> ';
-            $output .= sprintf('<span>%s</span>', esc_html($area_served));
+            $area_names = array_map(function($term) {
+                return esc_html($term->name);
+            }, $areas);
+            $output .= sprintf('<span>%s</span>', implode(', ', $area_names));
             $output .= '</div>';
         }
 
-        // Address
+        // Address Container
         $address = get_field('rg_address_container', $post_id);
-        if ($address) {
+        if ($address && is_array($address)) {
             $output .= $this->render_address($address);
         }
 
@@ -150,7 +126,21 @@ class Shortcode {
 
         $territory = get_sub_field('territory_served');
         if ($territory) {
-            $output .= sprintf('<p class="rep-territory"><strong>Territory:</strong> %s</p>', esc_html($territory));
+            // Handle territory if it's an array or term object
+            $territory_name = is_array($territory) ? $territory['name'] : 
+                             (is_object($territory) ? $territory->name : $territory);
+            $output .= sprintf('<p class="rep-territory"><strong>Territory:</strong> %s</p>', 
+                esc_html($territory_name));
+        }
+
+        // Rep Associate Address
+        $address = get_sub_field('address');
+        if ($address) {
+            $address_text = is_array($address) ? implode(', ', array_filter($address)) : $address;
+            $output .= '<div class="rep-address">';
+            $output .= '<strong>Address:</strong>';
+            $output .= sprintf('<p>%s</p>', esc_html($address_text));
+            $output .= '</div>';
         }
 
         $output .= '<div class="rep-contact-info">';
@@ -172,10 +162,14 @@ class Shortcode {
                 the_row();
                 $phone_type = get_sub_field('rep_phone_type');
                 $phone_number = get_sub_field('rep_phone_number');
+                
+                // Handle phone type if it's an array
+                $phone_type_text = is_array($phone_type) ? $phone_type['label'] : $phone_type;
+                
                 if ($phone_type && $phone_number) {
                     $output .= sprintf(
                         '<p class="rep-phone"><strong>%s:</strong> <a href="tel:%s">%s</a></p>',
-                        esc_html($phone_type),
+                        esc_html($phone_type_text),
                         esc_attr($phone_number),
                         esc_html($phone_number)
                     );
