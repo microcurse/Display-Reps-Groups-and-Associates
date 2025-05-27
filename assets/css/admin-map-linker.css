@@ -1,0 +1,115 @@
+/**
+ * Admin Map Linker Styles
+ */
+
+.rep-group-map-linker-wrap #map-linker-controls {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border: 1px solid #ccd0d4;
+}
+
+.rep-group-map-linker-wrap .control-group {
+    margin-bottom: 15px;
+}
+
+.rep-group-map-linker-wrap .control-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.rep-group-map-linker-wrap .control-group select,
+.rep-group-map-linker-wrap .control-group input[type="text"] {
+    min-width: 250px;
+}
+
+.rep-group-map-linker-wrap #rep-map-svg-wrapper {
+    border: 1px solid #ddd;
+    min-height: 300px;
+    max-width: 100%;
+    overflow: auto; /* In case SVG is very large */
+    position: relative; /* For loading message positioning */
+    background-color: #fff;
+}
+
+.rep-group-map-linker-wrap #rep-map-svg-wrapper object {
+    display: block; /* Remove extra space below object */
+    max-width: 100%;
+    height: auto;
+}
+
+.rep-group-map-linker-wrap #rep-map-svg-wrapper .loading-message,
+.rep-group-map-linker-wrap #rep-map-svg-wrapper .error-message {
+    padding: 20px;
+    text-align: center;
+    font-style: italic;
+}
+
+.rep-group-map-linker-wrap #rep-map-svg-wrapper .error-message {
+    color: #d63638;
+}
+
+/* SVG specific styles (will be applied inside the SVG DOM if possible) */
+/* These are indicative; actual application depends on SVG structure and JS interaction */
+.rep-group-map-linker-wrap #interactive-map-svg .mapped-region {
+    fill: #a0d8a0 !important; /* Light green for mapped */
+    stroke: #4caf50 !important;
+    stroke-width: 1.5px !important;
+}
+
+.rep-group-map-linker-wrap #interactive-map-svg .selected-region {
+    fill: #f0e68c !important; /* Khaki for selected */
+    stroke: #FFD700 !important;
+    stroke-width: 2px !important;
+    cursor: pointer;
+}
+
+.rep-group-map-linker-wrap #interactive-map-svg .hover-region {
+    /* fill: #e0e0e0 !important; */ /* Light gray on hover */
+    stroke: #333 !important;
+    stroke-width: 1.5px !important;
+    cursor: pointer;
+}
+
+.rep-group-map-linker-wrap #rep-map-selected-region-info {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #eef;
+    border: 1px solid #cce;
+}
+
+.rep-group-map-linker-wrap #current-mappings-display {
+    margin-top: 20px;
+}
+
+.rep-group-map-linker-wrap #current-mappings-display .mappings-list ul {
+    list-style: disc;
+    margin-left: 20px;
+}
+.rep-group-map-linker-wrap #current-mappings-display .mappings-list li {
+    padding: 3px 0;
+}
+
+/* Two-column layout for map and mappings list */
+#map-linker-main-area {
+    display: flex;
+    gap: 20px; /* Space between columns */
+    margin-top: 20px;
+}
+
+#current-mappings-display {
+    flex: 1; /* Takes up 1 part of the available space */
+    min-width: 250px; /* Minimum width for the mapping list */
+    max-width: 30%; /* Maximum width for the mapping list */
+    border: 1px solid #e0e0e0;
+    padding: 15px;
+    background-color: #fdfdfd;
+    overflow-y: auto; /* Scroll if content overflows */
+    max-height: 600px; /* Adjust as needed */
+}
+
+#rep-map-svg-wrapper {
+    flex: 2; /* Takes up 2 parts of the available space, making it wider */
+    /* min-height will be handled by its existing styles or content */
+} 

@@ -68,6 +68,7 @@
      new Map_Settings(); // Add this line
      new Shortcode(); // Add this line
      new Asset_Manager(); // Add this line
+     new Map_Editor_Page(); // Add this line
  }
  
  add_action('plugins_loaded', 'RepGroup\\init_rep_group_plugin');

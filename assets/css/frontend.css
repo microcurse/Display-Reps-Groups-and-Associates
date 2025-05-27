@@ -378,3 +378,285 @@
     fill: #f0f0f0 !important; /* Dim unselected regions when a filter is active */
     opacity: 0.5;
 }
+
+/* Interactive Rep Map Styles - Themed */
+.rep-group-map-interactive-area {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px; /* Adjust as per theme's spacing */
+    margin-top: 20px; /* var(--spacing-medium, 20px); */
+    margin-bottom: 20px; /* var(--spacing-medium, 20px); */
+    font-family: var(--font-family-primary);
+    color: var(--text-color);
+}
+
+.rep-map-info-column {
+    flex: 1;
+    min-width: 280px;
+    /* max-width: 100%; /* Let it be flexible with parent */
+    order: 1;
+    background-color: var(--bg-color-main-content, var(--bg-color));
+    position: relative; /* Crucial for absolute positioning of children */
+    overflow: hidden;   /* Prevent animation sliding out */
+    max-height: 65vh;  /* Make left column scrollable if content overflows */
+    overflow-y: auto;   /* Show scrollbar only when needed for the *active static panel* */
+    border: 1px solid var(--border-color); /* Re-add border if you removed it previously by mistake */
+}
+
+.rep-map-svg-column {
+    flex: 2;
+    min-width: 300px;
+    order: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px; /* Minimal padding around SVG */
+}
+
+.rep-group-map-svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+@media (max-width: 768px) { /* Consider theme breakpoints if available */
+    .rep-group-map-interactive-area {
+        flex-direction: column;
+    }
+    .rep-map-info-column,
+    .rep-map-svg-column {
+        max-width: 100%;
+        order: 0;
+    }
+    .rep-map-info-column {
+        margin-bottom: 20px; /* var(--spacing-medium, 20px); */
+    }
+}
+
+.rep-map-info-column p, .rep-map-info-column li {
+    color: var(--text-color);
+    font-size: var(--font-size-medium);
+}
+
+.rep-map-default-content,
+.rep-map-details-content {
+    padding: 15px;
+    box-sizing: border-box;
+    width: 100%; /* Take full width of parent */
+    /* No height: 100% here, let content dictate height for scrolling when static */
+}
+
+.panel-active {
+    display: block !important; /* Ensure it shows */
+    position: static; /* Default state for scrolling content */
+}
+
+.panel-hidden {
+    display: none !important; /* Ensure it is hidden */
+}
+
+/* Animation classes */
+.rep-map-info-column .slide-out,
+.rep-map-info-column .slide-in {
+    position: absolute !important; /* Crucial: take out of flow for overlay */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%; /* Fill the container during animation */
+    /* overflow-y: hidden; Prevent double scrollbars during animation if content is huge */ 
+}
+
+.rep-map-info-column .slide-out {
+    animation: slideOutLeftRepMap 0.3s forwards cubic-bezier(0.2,0,0,1);
+    z-index: 1; /* Keep outgoing on top briefly if needed, or not */
+}
+
+.rep-map-info-column .slide-in {
+    animation: slideInRightRepMap 0.3s forwards cubic-bezier(0.2,0,0,1);
+    z-index: 2; /* Ensure incoming is on top */
+}
+
+/* Keyframes remain the same */
+@keyframes slideOutLeftRepMap {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(-100%); opacity: 0; }
+}
+
+@keyframes slideInRightRepMap {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Styling for default list in info column */
+.rep-map-default-content .default-list-title {
+    font-size: var(--font-size-medium); /* Or slightly larger */
+    color: var(--text-color);
+    margin-bottom: 10px;
+    font-weight: bold;
+    padding-bottom: 5px;
+}
+
+.rep-map-default-content .default-rep-group-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.rep-map-default-content .default-rep-group-list li {
+    padding: 5px 0;
+    font-size: var(--font-size-medium);
+    color: var(--text-color);
+    border-bottom: 1px dotted var(--border-color);
+}
+.rep-map-default-content .default-rep-group-list li:last-child {
+    border-bottom: none;
+}
+
+
+/* Styling for detailed rep group and associate info */
+.rep-group-info-target .rep-group-item {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+}
+.rep-group-info-target .rep-group-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.rep-group-info-target .rep-group-main-details,
+.rep-group-info-target .rep-associate-item {
+    margin-bottom: 15px;
+}
+
+.rep-group-info-target .rep-group-title {
+    /* Previously styled for just title, now it\'s for the Rep Group title within details */
+    font-size: var(--font-size-large); /* Make it prominent */
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: var(--text-color);
+    font-family: var(--font-family-primary);
+    padding-bottom: 5px;
+}
+
+.address-details {
+    margin-bottom: 10px;
+    font-size: var(--font-size-medium);
+}
+.address-details p.address-line {
+    margin: 0 0 3px 0;
+    line-height: 1.5;
+}
+
+.contact-item {
+    display: flex; /* Align icon and text */
+    align-items: center;
+    margin-bottom: 5px;
+    font-size: var(--font-size-medium);
+}
+
+/* Changed from .dashicons to ion-icon */
+.contact-item ion-icon {
+    margin-right: 8px;
+    font-size: 1.2em; /* Ionicons might scale differently, adjust as needed. 1.2em of the parent font-size */
+    color: var(--link-color); /* Use link color for icons */
+    min-width: 20px; /* Ensure icon has some space */
+    text-align: center;
+    vertical-align: middle; /* Helps with alignment if font-size makes it sit oddly */
+}
+
+.contact-item a {
+    color: var(--link-color);
+    text-decoration: none;
+}
+.contact-item a:hover {
+    text-decoration: underline;
+}
+
+.phone-numbers-list, .associate-phones {
+    margin-top: 5px;
+}
+
+.rep-associates-section-title {
+    font-size: calc(var(--font-size-large) * 0.85); /* Slightly smaller than main group title */
+    font-weight: bold;
+    color: var(--text-color);
+    margin-top: 20px; /* Space above associates section */
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.rep-associates-list .rep-associate-item {
+    padding: 10px 0;
+    border-bottom: 1px dotted var(--border-color);
+}
+.rep-associates-list .rep-associate-item:last-child {
+    border-bottom: none;
+}
+
+.rep-associate-name {
+    font-size: var(--font-size-medium); /* Or slightly larger */
+    font-weight: bold;
+    color: var(--text-color);
+    margin: 0 0 5px 0;
+}
+
+.rep-associate-area {
+    font-size: var(--font-size-small);
+    color: var(--text-color);
+    margin-bottom: 8px;
+    font-style: italic;
+}
+
+.associate-address p {
+    font-size: var(--font-size-small);
+    line-height: 1.4;
+}
+
+/* Ensure h3 (area name highlight) is distinct if needed */
+.rep-group-info-target h3 {
+    margin-top: 0;
+    font-size: var(--font-size-large);
+    color: var(--text-color);
+    font-family: var(--font-family-primary);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    position: relative; 
+    /* padding-left: 5px; /* Remove or adjust if using border on h3 directly */
+    line-height: 1.4; 
+}
+
+.rep-group-info-target h3 .area-name-highlighted {
+    position: relative; 
+    display: inline-block; 
+    z-index: 1; 
+    /* padding: 0.1em 0.2em; /* Old padding for ::before context */
+    
+    /* New styles for thick left border */
+    border-left: 5px solid var(--area-highlight-color, var(--color-accent)); /* Adjust thickness (5px) as desired */
+    padding-left: 10px; /* Space between border and text */
+}
+
+/* Remove the ::before styles for the polygon */
+.rep-group-info-target h3 .area-name-highlighted::before {
+    content: none; /* Effectively removes the pseudo-element */
+}
+
+/* Change back button to look like a link */
+.rep-map-details-content .back-to-map-default {
+    display: inline-block; /* Allow margin and padding like a block, but flow inline */
+    background-color: transparent;
+    color: var(--link-color);
+    border: none;
+    padding-bottom: 1rem;
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: var(--font-family-primary);
+    font-size: var(--font-size-small);
+    transition: color var(--hover-transition);
+}
+.rep-map-details-content .back-to-map-default:hover {
+    color: var(--button-bg-hover); /* Or a hover variant of link-color */
+    background-color: transparent;
+}

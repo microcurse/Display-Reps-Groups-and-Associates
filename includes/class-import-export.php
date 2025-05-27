@@ -86,7 +86,7 @@ class Import_Export {
             wp_die('Unauthorized');
         }
 
-        require_once REP_GROUP_PLUGIN_PATH . 'vendor/autoload.php';
+        require_once REP_GROUP_PATH . 'vendor/autoload.php';
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -228,7 +228,7 @@ class Import_Export {
             wp_die('No file uploaded');
         }
 
-        require_once REP_GROUP_PLUGIN_PATH . 'vendor/autoload.php';
+        require_once REP_GROUP_PATH . 'vendor/autoload.php';
 
         $inputFileName = $_FILES['import_file']['tmp_name'];
         $updates = 0;
@@ -365,7 +365,7 @@ class Import_Export {
             wp_die('Unauthorized');
         }
 
-        require_once REP_GROUP_PLUGIN_PATH . 'vendor/autoload.php';
+        require_once REP_GROUP_PATH . 'vendor/autoload.php';
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();

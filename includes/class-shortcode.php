@@ -2,8 +2,11 @@
 namespace RepGroup;
 
 class Shortcode {
+    const DEFAULT_REGION_COLOR = '#CCCCCC'; // Default color for regions on frontend map
+
     public function __construct() {
         add_shortcode('rep_group_display', [$this, 'render_rep_group_display']);
+        add_shortcode('rep_map', [$this, 'render_rep_map']);
     }
 
     /**
@@ -124,12 +127,11 @@ class Shortcode {
             $output .= sprintf('<h3 class="rep-name">%s</h3>', esc_html($name));
         }
 
-        $territory = get_sub_field('territory_served');
-        if ($territory) {
-            // Handle territory if it's an array or term object
-            $territory_name = is_array($territory) ? $territory['name'] : 
-                             (is_object($territory) ? $territory->name : $territory);
-            $output .= sprintf('<p class="rep-territory"><strong>Territory:</strong> %s</p>', 
+        $areas_served_field = get_sub_field('areas_served'); // Assuming this is the new field name for taxonomy
+        if ($areas_served_field) {
+            $territory_name = is_array($areas_served_field) ? $areas_served_field['name'] : 
+                             (is_object($areas_served_field) ? $areas_served_field->name : $areas_served_field);
+            $output .= sprintf('<p class="rep-territory"><strong>Area Served:</strong> %s</p>', 
                 esc_html($territory_name));
         }
 
@@ -163,7 +165,6 @@ class Shortcode {
                 $phone_type = get_sub_field('rep_phone_type');
                 $phone_number = get_sub_field('rep_phone_number');
                 
-                // Handle phone type if it's an array
                 $phone_type_text = is_array($phone_type) ? $phone_type['label'] : $phone_type;
                 
                 if ($phone_type && $phone_number) {
@@ -184,6 +185,113 @@ class Shortcode {
                 esc_attr($email),
                 esc_html($email)
             );
+        }
+
+        return $output;
+    }
+
+    /**
+     * Render the rep map shortcode
+     * [rep_map type="local"] or [rep_map type="international"]
+     */
+    public function render_rep_map($atts) {
+        $attributes = shortcode_atts([
+            'type' => 'local', 
+            'interactive' => 'true'
+        ], $atts);
+
+        $map_type = strtolower($attributes['type']);
+        $is_interactive = filter_var($attributes['interactive'], FILTER_VALIDATE_BOOLEAN);
+        $svg_url = '';
+        $map_links_option_name = ($map_type === 'local') ? 'rep_group_local_map_links' : 'rep_group_international_map_links';
+        $map_links = get_option($map_links_option_name, []);
+
+        foreach ($map_links as $svg_id => $data) {
+            if (!is_array($data)) {
+                $map_links[$svg_id] = ['term_id' => $data, 'color' => self::DEFAULT_REGION_COLOR];
+            }
+            if (!isset($data['color'])){
+                 $map_links[$svg_id]['color'] = self::DEFAULT_REGION_COLOR;
+            }
+        }
+
+        if ($map_type === 'local') {
+            $svg_url = get_option('rep_group_local_svg');
+        } elseif ($map_type === 'international') {
+            $svg_url = get_option('rep_group_international_svg');
+        }
+
+        if (empty($svg_url)) {
+            return '<!-- Rep map SVG URL not configured or invalid type -->';
+        }
+
+        $map_instance_id = 'rep-map-instance-' . esc_attr($map_type) . '-' . wp_generate_uuid4();
+        $output = sprintf(
+            '<div id="%s" class="rep-group-map-interactive-area %s-map-interactive-area">',
+            $map_instance_id,
+            esc_attr($map_type)
+        );
+
+        // --- Default content for info column: List of all rep groups ---
+        $default_content_html = '<p>' . __('No Rep Groups found.', 'rep-group') . '</p>';
+        $all_rep_groups_args = [
+            'post_type' => 'rep-group',
+            'posts_per_page' => -1,
+            'orderby' => 'title',
+            'order' => 'ASC'
+        ];
+        $all_rep_groups_query = new \WP_Query($all_rep_groups_args);
+        if ($all_rep_groups_query->have_posts()) {
+            $default_content_html = '<h3 class="default-list-title">' . __('All Rep Groups', 'rep-group') . '</h3>';
+            $default_content_html .= '<ul class="default-rep-group-list">';
+            while ($all_rep_groups_query->have_posts()) {
+                $all_rep_groups_query->the_post();
+                $default_content_html .= sprintf('<li>%s</li>', get_the_title());
+            }
+            $default_content_html .= '</ul>';
+            wp_reset_postdata();
+        }
+        // --- End default content generation ---
+
+        $output .= '<div class="rep-map-info-column">';
+        $output .= '  <div class="rep-map-default-content panel-active">';
+        $output .= $default_content_html;
+        $output .= '  </div>';
+        $output .= '  <div class="rep-map-details-content panel-hidden">';
+        $output .= '    <a href="#" class="back-to-map-default" role="button">&laquo; ' . __('Back to Overview', 'rep-group') . '</a>';
+        $output .= '    <div class="rep-group-info-target"></div>';
+        $output .= '  </div>';
+        $output .= '</div>';
+
+        $output .= '<div class="rep-map-svg-column">';
+        $output .= sprintf(
+            '<object type="image/svg+xml" data="%s" class="rep-group-map-svg"></object>',
+            esc_url($svg_url)
+        );
+        $output .= '</div>';
+
+        $output .= '</div>'; // End #map_instance_id
+
+        if ($is_interactive) {
+            if (!wp_script_is('rep-group-frontend-map-js', 'enqueued')) {
+                wp_enqueue_script(
+                    'rep-group-frontend-map-js',
+                    REP_GROUP_URL . 'assets/js/frontend-map-display.js',
+                    ['jquery'],
+                    REP_GROUP_VERSION,
+                    true
+                );
+            }
+            $localized_data = [
+                'map_id'        => $map_instance_id, // Pass the main container ID
+                'svg_url'       => esc_url($svg_url),
+                'map_links'     => $map_links,
+                'default_color' => self::DEFAULT_REGION_COLOR,
+                'ajax_url'      => admin_url('admin-ajax.php'),
+                'nonce'         => wp_create_nonce('rep_group_frontend_map_nonce') // Nonce for frontend AJAX
+            ];
+            // Ensure a unique JS object name for each map instance data
+            wp_localize_script('rep-group-frontend-map-js', 'RepMapData_' . str_replace('-', '_', $map_instance_id), $localized_data);
         }
 
         return $output;

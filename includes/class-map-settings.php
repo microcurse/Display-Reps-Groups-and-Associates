@@ -65,6 +65,11 @@ class Map_Settings {
     public function render_settings_page() {
         ?>
         <div class="wrap">
+            <?php if (isset($_GET['settings-updated']) && $_GET['settings-updated']) : ?>
+                <div id="message" class="updated notice is-dismissible">
+                    <p><strong><?php _e('Settings saved.', 'rep-group'); ?></strong></p>
+                </div>
+            <?php endif; ?>
             <h1>Map Settings</h1>
             <form method="post" action="options.php">
                 <?php
@@ -97,5 +102,5 @@ class Map_Settings {
 }
 
 // Initialize the settings page
-new Map_Settings();
+// new Map_Settings(); Commenting out this line
 ?>
