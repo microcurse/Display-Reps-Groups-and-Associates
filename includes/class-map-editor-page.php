@@ -22,6 +22,9 @@ class Map_Editor_Page {
         add_action( 'wp_ajax_delete_rep_map_link', [ $this, 'ajax_delete_rep_map_link' ] );
         add_action( 'wp_ajax_get_rep_group_info_for_area', [ $this, 'ajax_get_rep_group_info_for_area' ] );
         add_action( 'wp_ajax_nopriv_get_rep_group_info_for_area', [ $this, 'ajax_get_rep_group_info_for_area' ] );
+        // New AJAX actions for getting rep group by ID
+        add_action( 'wp_ajax_get_rep_group_details_by_id', [ $this, 'ajax_get_rep_group_details_by_id' ] );
+        add_action( 'wp_ajax_nopriv_get_rep_group_details_by_id', [ $this, 'ajax_get_rep_group_details_by_id' ] );
     }
 
     private function get_formatted_address_html($address_fields, $prefix = '') {
@@ -382,17 +385,40 @@ class Map_Editor_Page {
                             $associate_item_html .= '<h6 class="rep-associate-name">' . esc_html($associate_name) . '</h6>';
                         }
 
-                        $assoc_areas_served_term = get_sub_field('areas_served'); // Term object
-                        if ($assoc_areas_served_term && !is_wp_error($assoc_areas_served_term)) {
-                             $associate_item_html .= '<p class="rep-associate-area"><strong>' . esc_html__('Serves:', 'rep-group') . '</strong> ' . esc_html($assoc_areas_served_term->name) . '</p>';
-                        }
-                        
-                        $assoc_address_text = get_sub_field('address'); // Simple text field
-                        if ($assoc_address_text) {
-                            $associate_item_html .= '<div class="address-details associate-address"><p>' . nl2br(esc_html($assoc_address_text)) . '</p></div>';
+                        // Debugging line for areas_served (can be removed after fix)
+                        // error_log(\'[DEBUG] Associate: \' . $associate_name . \' - areas_served raw value: \' . print_r($assoc_areas_served_value, true));
+
+                        $assoc_areas_served_value = get_sub_field('areas_served');
+                        $area_names_to_display = [];
+
+                        if (is_array($assoc_areas_served_value) && !empty($assoc_areas_served_value)) {
+                            foreach ($assoc_areas_served_value as $term_id) {
+                                $term = get_term($term_id, 'area-served'); // Specify taxonomy
+                                if ($term instanceof \WP_Term && !is_wp_error($term)) {
+                                    $area_names_to_display[] = esc_html($term->name);
+                                }
+                            }
+                        } elseif ($assoc_areas_served_value instanceof \WP_Term && !empty($assoc_areas_served_value->name)) {
+                            // Fallback if it somehow returns a single Term object (though debug shows array)
+                            $area_names_to_display[] = esc_html($assoc_areas_served_value->name);
                         }
 
-                        // Use the specific helper for associate phones (which uses have_rows internally)
+                        if (!empty($area_names_to_display)) {
+                             $associate_item_html .= '<p class="rep-associate-area"><strong>' . esc_html__('Serves:', 'rep-group') . '</strong> ' . implode(', ', $area_names_to_display) . '</p>';
+                        }
+                        
+                        $assoc_address_field_value = get_sub_field('address');
+                        if (is_array($assoc_address_field_value) && !empty(array_filter($assoc_address_field_value))) { 
+                            // If it's an array (like an ACF address group), pass it to the formatter.
+                            // The formatter get_formatted_address_html expects keys like 'address_1', 'city', etc. without a prefix if $prefix is empty.
+                            $associate_item_html .= $this->get_formatted_address_html($assoc_address_field_value, ''); // Pass empty prefix
+                        } elseif (is_string($assoc_address_field_value) && !empty(trim($assoc_address_field_value))) {
+                            // Fallback if it's just a simple text string and not empty
+                            $associate_item_html .= '<div class="address-details associate-address"><p>' . nl2br(esc_html($assoc_address_field_value)) . '</p></div>';
+                        } else {
+                            // Address is empty or not in a recognized format, skip.
+                        }
+
                         $associate_item_html .= $this->get_formatted_associate_phones_html();
 
                         $assoc_email_text = get_sub_field('email');
@@ -422,6 +448,127 @@ class Map_Editor_Page {
             $output_html = '<h3><span class="area-name-highlighted">' . esc_html( $term->name ) . '</span></h3>';
             $output_html .= '<p>' . __( 'No rep groups found serving this area.', 'rep-group' ) . '</p>';
         }
+
+        wp_send_json_success( [ 'html' => $output_html ] );
+    }
+
+    public function ajax_get_rep_group_details_by_id() {
+        check_ajax_referer( 'rep_group_frontend_map_nonce', 'nonce' ); // Reuse existing nonce for simplicity
+
+        $rep_group_id = isset( $_POST['rep_group_id'] ) ? absint( $_POST['rep_group_id'] ) : 0;
+
+        if ( ! $rep_group_id || get_post_type($rep_group_id) !== 'rep-group' ) {
+            wp_send_json_error( [ 'message' => __( 'Invalid Rep Group ID provided.', 'rep-group' ) ] );
+        }
+
+        $output_html = '';
+        $post = get_post($rep_group_id);
+        if (!$post) {
+            wp_send_json_error( [ 'message' => __( 'Rep Group not found.', 'rep-group' ) ] );
+        }
+
+        // Setup post data for ACF functions like have_rows, get_field, get_sub_field
+        // global $post; // Already global, but ensure it\'s set for the current context of ACF
+        // $original_post = $post;
+        // $post = get_post($rep_group_id);
+        // setup_postdata($post); // This might not be strictly necessary if using ID with get_field/have_rows
+
+        // No area color to pass here for the h3 highlight, so we use a default or no highlight.
+        // Or, we could try to find one area this group serves and use its color - too complex for now.
+        $output_html .= '<h3><span class="area-name-highlighted">' . esc_html( get_the_title($rep_group_id) ) . '</span></h3>'; // No specific area color for this context
+        
+        $output_html .= '<div class="rep-group-item"> <!-- Re-use class for consistent styling -->';
+        // --- Rep Group's Own Details ---
+        $output_html .= '<div class="rep-group-main-details">' ; // Removed h4 title as it's already in h3
+
+        $rg_address_data = get_field('rg_address_container', $rep_group_id);
+        if ($rg_address_data) {
+            $output_html .= $this->get_formatted_address_html($rg_address_data, 'rg_');
+        }
+        
+        $rg_phones_data = get_field('rg_phone_numbers', $rep_group_id);
+        if ($rg_phones_data) {
+            $output_html .= $this->get_formatted_phone_numbers_html($rg_phones_data, false);
+        }
+
+        $rg_email_data = get_field('rg_email', $rep_group_id);
+        if ($rg_email_data) {
+            $output_html .= $this->get_formatted_email_html($rg_email_data);
+        }
+        $output_html .= '</div>'; // end .rep-group-main-details
+
+        // --- Rep Associates ---
+        if ( have_rows( 'rep_associates', $rep_group_id ) ) {
+            $output_html .= '<h5 class="rep-associates-section-title">' . esc_html__('Rep Associates', 'rep-group') . '</h5>';
+            $output_html .= '<div class="rep-associates-list">' ;
+            
+            $associates_items = [];
+            while ( have_rows( 'rep_associates', $rep_group_id ) ) {
+                the_row(); // Sets up sub-field context
+                $associate_item_html = '<div class="rep-associate-item">' ;
+                $associate_name = get_sub_field('name');
+
+                if ($associate_name) {
+                    $associate_item_html .= '<h6 class="rep-associate-name">' . esc_html($associate_name) . '</h6>';
+                }
+
+                // Debugging line for areas_served (can be removed after fix)
+                // error_log(\'[DEBUG] Associate: \' . $associate_name . \' - areas_served raw value: \' . print_r($assoc_areas_served_value, true));
+
+                $assoc_areas_served_value = get_sub_field('areas_served');
+                $area_names_to_display = [];
+
+                if (is_array($assoc_areas_served_value) && !empty($assoc_areas_served_value)) {
+                    foreach ($assoc_areas_served_value as $term_id) {
+                        $term = get_term($term_id, 'area-served'); // Specify taxonomy
+                        if ($term instanceof \WP_Term && !is_wp_error($term)) {
+                            $area_names_to_display[] = esc_html($term->name);
+                        }
+                    }
+                } elseif ($assoc_areas_served_value instanceof \WP_Term && !empty($assoc_areas_served_value->name)) {
+                    // Fallback if it somehow returns a single Term object (though debug shows array)
+                    $area_names_to_display[] = esc_html($assoc_areas_served_value->name);
+                }
+
+                if (!empty($area_names_to_display)) {
+                     $associate_item_html .= '<p class="rep-associate-area"><strong>' . esc_html__('Serves:', 'rep-group') . '</strong> ' . implode(', ', $area_names_to_display) . '</p>';
+                }
+                
+                $assoc_address_field_value = get_sub_field('address');
+                if (is_array($assoc_address_field_value) && !empty(array_filter($assoc_address_field_value))) { 
+                    // If it's an array (like an ACF address group), pass it to the formatter.
+                    // The formatter get_formatted_address_html expects keys like 'address_1', 'city', etc. without a prefix if $prefix is empty.
+                    $associate_item_html .= $this->get_formatted_address_html($assoc_address_field_value, ''); // Pass empty prefix
+                } elseif (is_string($assoc_address_field_value) && !empty(trim($assoc_address_field_value))) {
+                    // Fallback if it's just a simple text string and not empty
+                    $associate_item_html .= '<div class="address-details associate-address"><p>' . nl2br(esc_html($assoc_address_field_value)) . '</p></div>';
+                } else {
+                    // Address is empty or not in a recognized format, skip.
+                }
+
+                $associate_item_html .= $this->get_formatted_associate_phones_html();
+
+                $assoc_email_text = get_sub_field('email');
+                if ($assoc_email_text) {
+                    $associate_item_html .= $this->get_formatted_email_html($assoc_email_text);
+                }
+                $associate_item_html .= '</div>'; // end .rep-associate-item
+                $associates_items[] = ['name' => $associate_name ? strtolower($associate_name) : '', 'html' => $associate_item_html];
+            }
+
+            usort($associates_items, function($a, $b) {
+                return strcmp($a['name'], $b['name']);
+            });
+
+            foreach ($associates_items as $item) {
+                $output_html .= $item['html'];
+            }
+            $output_html .= '</div>'; // end .rep-associates-list
+        }
+        $output_html .= '</div>'; // end .rep-group-item
+        
+        // wp_reset_postdata(); // Reset if setup_postdata was used
+        // $post = $original_post; // Restore global post object if changed
 
         wp_send_json_success( [ 'html' => $output_html ] );
     }

@@ -246,7 +246,11 @@ class Shortcode {
             $default_content_html .= '<ul class="default-rep-group-list">';
             while ($all_rep_groups_query->have_posts()) {
                 $all_rep_groups_query->the_post();
-                $default_content_html .= sprintf('<li>%s</li>', get_the_title());
+                $rep_group_id = get_the_ID();
+                $default_content_html .= sprintf('<li data-rep-group-id="%s"><a href="#" class="rep-group-list-item-link">%s</a></li>', 
+                    esc_attr($rep_group_id), 
+                    get_the_title()
+                );
             }
             $default_content_html .= '</ul>';
             wp_reset_postdata();

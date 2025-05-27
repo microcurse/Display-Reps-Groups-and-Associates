@@ -121,8 +121,50 @@
         });
     }
 
+    function displayRepGroupDetailsById(repGroupId, mapInstanceId, nonce, ajaxUrl) {
+        const mapInteractiveArea = $('#' + mapInstanceId);
+        const infoColumn = mapInteractiveArea.find('.rep-map-info-column');
+        const defaultContent = infoColumn.find('.rep-map-default-content');
+        const detailsContent = infoColumn.find('.rep-map-details-content');
+        const infoTarget = detailsContent.find('.rep-group-info-target');
+
+        infoTarget.html('<p><em>Loading Rep Group details...</em></p>');
+
+        if (defaultContent.hasClass('panel-active')) {
+            defaultContent.removeClass('panel-active').addClass('slide-out');
+            detailsContent.removeClass('panel-hidden').addClass('panel-active slide-in');
+        } else {
+            detailsContent.removeClass('panel-hidden').addClass('panel-active');
+        }
+        infoColumn.scrollTop(0);
+
+        $.post(ajaxUrl, {
+            action: 'get_rep_group_details_by_id',
+            nonce: nonce,
+            rep_group_id: repGroupId
+        }).done(function(response) {
+            if (response.success) {
+                infoTarget.html(response.data.html);
+            } else {
+                infoTarget.html('<p class="error-message">' + (response.data.message || 'Could not load Rep Group details.') + '</p>');
+            }
+        }).fail(function() {
+            infoTarget.html('<p class="error-message">AJAX error loading Rep Group details.</p>');
+        }).always(function() {
+            setTimeout(function() {
+                infoColumn.find('.slide-out').removeClass('slide-out').addClass('panel-hidden');
+                infoColumn.find('.slide-in').removeClass('slide-in');
+            }, 300);
+        });
+    }
+
     // Initialize all maps on the page
     $(function() {
+        // Click handler for map regions (existing)
+        // Note: processSvg needs to be adjusted to pass mapInstanceId if it's not already doing so for displayRepInfoForArea.
+        // Assuming mapData in processSvg contains map_id (which is mapInstanceId) and other necessary data.
+
+        // Click handler for the "Back to Overview" link (existing)
         $(document).on('click', '.rep-map-details-content .back-to-map-default', function(e) {
             e.preventDefault(); // It's an <a> tag now
             const infoColumn = $(this).closest('.rep-map-info-column');
@@ -142,6 +184,23 @@
                 infoColumn.find('.slide-out').removeClass('slide-out').addClass('panel-hidden');
                 infoColumn.find('.slide-in').removeClass('slide-in');
             }, 300);
+        });
+
+        // New click handler for rep group list items in the default view
+        $(document).on('click', '.rep-map-default-content .rep-group-list-item-link', function(e) {
+            e.preventDefault();
+            const listItem = $(this).closest('li');
+            const repGroupId = listItem.data('rep-group-id');
+            const mapInteractiveArea = listItem.closest('.rep-group-map-interactive-area');
+            const mapInstanceId = mapInteractiveArea.attr('id');
+            
+            // We need nonce and ajax_url, which are part of the localized RepMapData_ for this specific map instance
+            const mapData = window['RepMapData_' + mapInstanceId.replace(/-/g, '_')]; // map_instance_id has hyphens
+            if (repGroupId && mapInstanceId && mapData && mapData.nonce && mapData.ajax_url) {
+                displayRepGroupDetailsById(repGroupId, mapInstanceId, mapData.nonce, mapData.ajax_url);
+            } else {
+                console.error('Could not retrieve rep group ID or map data for AJAX call.', { repGroupId, mapInstanceId, mapData });
+            }
         });
 
         for (const key in window) {

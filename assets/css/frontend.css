@@ -400,7 +400,6 @@
     overflow: hidden;   /* Prevent animation sliding out */
     max-height: 65vh;  /* Make left column scrollable if content overflows */
     overflow-y: auto;   /* Show scrollbar only when needed for the *active static panel* */
-    border: 1px solid var(--border-color); /* Re-add border if you removed it previously by mistake */
 }
 
 .rep-map-svg-column {
@@ -605,7 +604,6 @@
     font-size: var(--font-size-small);
     color: var(--text-color);
     margin-bottom: 8px;
-    font-style: italic;
 }
 
 .associate-address p {
