@@ -299,3 +299,82 @@
     padding: 2rem;
     color: #666;
 }
+
+/* Styles for map display from previous steps - ensuring they exist */
+#rep-map-container {
+    position: relative;
+    width: 100%;
+}
+
+#rep-map-container svg {
+    width: 100%;
+    height: auto;
+    border: 1px solid #ccc;
+}
+
+#rep-map-container .map-active svg path,
+#rep-map-container .map-active svg g,
+#rep-map-container .map-active svg rect,
+#rep-map-container .map-active svg circle,
+#rep-map-container .map-active svg polygon {
+    fill: #e0e0e0; /* Default fill for map regions */
+    stroke: #fff;
+    stroke-width: 1;
+    transition: fill 0.3s ease;
+}
+
+#rep-map-container .map-active svg .hovered {
+    fill: #a0a0a0; /* Fill for hovered regions */
+}
+
+#rep-map-container .map-active svg .highlight {
+    fill: #2271b1; /* Example highlight color */
+}
+
+#map-sidebar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 100%;
+    background-color: #f9f9f9;
+    border-left: 1px solid #ccc;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+#map-sidebar h3 {
+    margin-top: 0;
+}
+/* End of previously expected map styles */
+
+.map-controls {
+    margin-bottom: 15px;
+}
+.map-controls button {
+    margin-right: 10px;
+}
+
+.map-filters {
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+}
+.map-filters label {
+    margin-right: 5px;
+    font-weight: bold;
+}
+.map-filters select {
+    margin-right: 15px;
+    padding: 5px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+}
+
+#rep-map-container .map-active svg .dimmed {
+    fill: #f0f0f0 !important; /* Dim unselected regions when a filter is active */
+    opacity: 0.5;
+}
