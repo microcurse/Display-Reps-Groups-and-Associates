@@ -36,16 +36,28 @@ class Asset_Manager {
             return;
         }
 
-        $has_display_shortcode = has_shortcode($post->post_content, 'rep_group_display');
+        $has_rep_group_display_shortcode = has_shortcode($post->post_content, 'rep_group_display');
+        $has_rep_map_display_shortcode = has_shortcode($post->post_content, 'rep_map_display');
         
-        if ($has_display_shortcode || is_singular('rep-group') || is_post_type_archive('rep-group')) {
-            wp_enqueue_style('dashicons');
+        if ($has_rep_group_display_shortcode || $has_rep_map_display_shortcode || is_singular('rep-group') || is_post_type_archive('rep-group')) {
+            wp_enqueue_style('dashicons'); // Consider if dashicons are needed for the map display
             wp_enqueue_style(
                 'rep-group-frontend',
                 REP_GROUP_URL . 'assets/css/frontend.css',
                 [],
                 REP_GROUP_VERSION
             );
+
+            // Enqueue the new frontend map script
+            if ($has_rep_map_display_shortcode) { // Only if the map shortcode is present
+                wp_enqueue_script(
+                    'rep-group-frontend-map',
+                    REP_GROUP_URL . 'assets/js/frontend-map.js',
+                    [], // No specific dependencies for this basic version
+                    REP_GROUP_VERSION,
+                    true // Load in footer
+                );
+            }
         }
     }
 } 

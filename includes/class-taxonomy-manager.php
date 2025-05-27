@@ -56,13 +56,19 @@ class Taxonomy_Manager {
         <div class="form-field">
             <label for="area_color">Area Color</label>
             <input type="text" name="area_color" id="area_color" class="color-picker" value="#2271b1">
-            <p class="description">Choose a color for this area on the map. The slug should match the SVG ID (e.g., US-CA for California)</p>
+            <p class="description">Choose a color for this area on the map.</p>
+        </div>
+        <div class="form-field">
+            <label for="_rep_svg_target_id">SVG ID/Class</label>
+            <input type="text" name="_rep_svg_target_id" id="_rep_svg_target_id" value="">
+            <p class="description">Enter the SVG ID or class selector for this area (e.g., #US-CA or .california). This is used to link the area to the map.</p>
         </div>
         <?php
     }
 
     public function edit_custom_fields($term) {
         $color = get_term_meta($term->term_id, 'area_color', true) ?: '#2271b1';
+        $_rep_svg_target_id = get_term_meta($term->term_id, '_rep_svg_target_id', true);
         ?>
         <tr class="form-field">
             <th scope="row">
@@ -70,16 +76,25 @@ class Taxonomy_Manager {
             </th>
             <td>
                 <input type="text" name="area_color" id="area_color" class="color-picker" value="<?php echo esc_attr($color); ?>">
-                <p class="description">Choose a color for this area on the map. The slug should match the SVG ID (e.g., US-CA for California)</p>
-                <p class="description">Current SVG ID (slug): <?php echo esc_html($term->slug); ?></p>
+                <p class="description">Choose a color for this area on the map.</p>
+            </td>
+        </tr>
+        <tr class="form-field">
+            <th scope="row">
+                <label for="_rep_svg_target_id">SVG ID/Class</label>
+            </th>
+            <td>
+                <input type="text" name="_rep_svg_target_id" id="_rep_svg_target_id" value="<?php echo esc_attr($_rep_svg_target_id); ?>">
+                <p class="description">Enter the SVG ID or class selector for this area (e.g., #US-CA or .california). This is used to link the area to the map.</p>
+                <p class="description">Current term slug (can be used as SVG ID if appropriate): <?php echo esc_html($term->slug); ?></p>
             </td>
         </tr>
         <?php
     }
 
     public function save_custom_fields($term_id) {
-        if (isset($_POST['svg_id'])) {
-            update_term_meta($term_id, 'svg_id', sanitize_text_field($_POST['svg_id']));
+        if (isset($_POST['_rep_svg_target_id'])) {
+            update_term_meta($term_id, '_rep_svg_target_id', sanitize_text_field($_POST['_rep_svg_target_id']));
         }
         if (isset($_POST['area_color'])) {
             update_term_meta($term_id, 'area_color', sanitize_hex_color($_POST['area_color']));
@@ -95,7 +110,7 @@ class Taxonomy_Manager {
             'hide_empty' => false,
             'meta_query' => [
                 [
-                    'key' => 'svg_id',
+                    'key' => '_rep_svg_target_id',
                     'value' => $svg_id,
                     'compare' => '='
                 ]
@@ -116,16 +131,17 @@ class Taxonomy_Manager {
 
         $terms_with_svg = [];
         foreach ($terms as $term) {
-            $svg_id = get_term_meta($term->term_id, 'svg_id', true);
+            $svg_id = get_term_meta($term->term_id, '_rep_svg_target_id', true);
+            $color = get_term_meta($term->term_id, 'area_color', true); // Get the color
             if ($svg_id) {
                 $terms_with_svg[$svg_id] = [
                     'term_id' => $term->term_id,
                     'name' => $term->name,
-                    'slug' => $term->slug
+                    'slug' => $term->slug,
+                    'color' => $color ?: null // Add color here
                 ];
             }
         }
-
         return $terms_with_svg;
     }
 

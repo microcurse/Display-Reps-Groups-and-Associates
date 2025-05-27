@@ -40,6 +40,21 @@
      
      // Build file path
      $file_path = REP_GROUP_PATH . 'includes/' . $file_name;
+
+     // For Map_Settings, the path is different
+     if ($class_name === 'Map_Settings') {
+        $file_path = REP_GROUP_PATH . 'includes/class-map-settings.php';
+     }
+
+     // For Shortcode class
+     if ($class_name === 'Shortcode') {
+        $file_path = REP_GROUP_PATH . 'includes/class-shortcode.php';
+     }
+
+     // For Asset_Manager class
+     if ($class_name === 'Asset_Manager') {
+        $file_path = REP_GROUP_PATH . 'includes/class-asset-manager.php';
+     }
      
      // Include file if it exists
      if (file_exists($file_path)) {
@@ -49,7 +64,10 @@
  
  // Initialize plugin
  function init_rep_group_plugin() {
-     $plugin = new Rep_Group();
+     new Rep_Group(); // This should already exist
+     new Map_Settings(); // Add this line
+     new Shortcode(); // Add this line
+     new Asset_Manager(); // Add this line
  }
  
  add_action('plugins_loaded', 'RepGroup\\init_rep_group_plugin');
