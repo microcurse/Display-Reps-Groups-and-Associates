@@ -100,7 +100,5 @@ class Map_Settings {
         <?php
     }
 }
-
-// Initialize the settings page
-// new Map_Settings(); Commenting out this line
 ?>
+

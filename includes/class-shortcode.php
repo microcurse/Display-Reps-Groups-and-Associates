@@ -2,8 +2,6 @@
 namespace RepGroup;
 
 class Shortcode {
-    const DEFAULT_REGION_COLOR = '#CCCCCC'; // Default color for regions on frontend map
-
     public function __construct() {
         add_shortcode('rep_group_display', [$this, 'render_rep_group_display']);
         add_shortcode('rep_map', [$this, 'render_rep_map']);
@@ -40,9 +38,6 @@ class Shortcode {
      * Render a single rep group
      */
     private function render_single_rep_group($post_id) {
-        // Debug output
-        error_log('Rendering rep group: ' . $post_id);
-        
         $output = '<section class="rep-group">';
         
         // Get Area Served from taxonomy
@@ -127,12 +122,18 @@ class Shortcode {
             $output .= sprintf('<h3 class="rep-name">%s</h3>', esc_html($name));
         }
 
-        $areas_served_field = get_sub_field('areas_served'); // Assuming this is the new field name for taxonomy
-        if ($areas_served_field) {
-            $territory_name = is_array($areas_served_field) ? $areas_served_field['name'] : 
-                             (is_object($areas_served_field) ? $areas_served_field->name : $areas_served_field);
-            $output .= sprintf('<p class="rep-territory"><strong>Area Served:</strong> %s</p>', 
-                esc_html($territory_name));
+        $assoc_areas_served_value = get_sub_field('areas_served');
+        $area_names_to_display = [];
+        if (is_array($assoc_areas_served_value) && !empty($assoc_areas_served_value)) {
+            foreach ($assoc_areas_served_value as $term_id) {
+                $term = get_term($term_id, 'area-served'); // Assuming 'area-served' is the taxonomy slug
+                if ($term instanceof \WP_Term && !is_wp_error($term)) {
+                    $area_names_to_display[] = esc_html($term->name);
+                }
+            }
+        }
+        if (!empty($area_names_to_display)) {
+            $output .= sprintf('<p class="rep-territory"><strong>Area Served:</strong> %s</p>', implode(', ', $area_names_to_display));
         }
 
         // Rep Associate Address
@@ -208,10 +209,10 @@ class Shortcode {
 
         foreach ($map_links as $svg_id => $data) {
             if (!is_array($data)) {
-                $map_links[$svg_id] = ['term_id' => $data, 'color' => self::DEFAULT_REGION_COLOR];
+                $map_links[$svg_id] = ['term_id' => $data, 'color' => REP_GROUP_DEFAULT_REGION_COLOR];
             }
-            if (!isset($data['color'])){
-                 $map_links[$svg_id]['color'] = self::DEFAULT_REGION_COLOR;
+            if (!isset($map_links[$svg_id]['color'])){
+                 $map_links[$svg_id]['color'] = REP_GROUP_DEFAULT_REGION_COLOR;
             }
         }
 
@@ -290,7 +291,7 @@ class Shortcode {
                 'map_id'        => $map_instance_id, // Pass the main container ID
                 'svg_url'       => esc_url($svg_url),
                 'map_links'     => $map_links,
-                'default_color' => self::DEFAULT_REGION_COLOR,
+                'default_color' => REP_GROUP_DEFAULT_REGION_COLOR,
                 'ajax_url'      => admin_url('admin-ajax.php'),
                 'nonce'         => wp_create_nonce('rep_group_frontend_map_nonce') // Nonce for frontend AJAX
             ];

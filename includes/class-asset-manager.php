@@ -19,14 +19,20 @@ class Asset_Manager {
         wp_enqueue_script('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', ['jquery'], '4.1.0', true);
     }
 
-    private function is_plugin_admin_page($hook) {
-        $plugin_pages = [
-            'edit.php?post_type=rep-group',
-            'post-new.php?post_type=rep-group',
-            'post.php?post_type=rep-group'
-        ];
-
-        return in_array($hook, $plugin_pages);
+    private function is_plugin_admin_page($hook_suffix) { // hook_suffix is $hook passed to admin_enqueue_scripts
+        $screen = get_current_screen();
+        if (!$screen) {
+            return false;
+        }
+        // Target 'rep-group' CPT list, add new, and edit screens
+        if ($screen->post_type === 'rep-group') {
+            if ($screen->base === 'edit' || $screen->base === 'post') {
+                return true;
+            }
+        }
+        // This function is specifically for the CPT screens. Other admin pages (Map Settings, Map Linker)
+        // enqueue their own assets. Asset_Manager is for general admin assets for the CPT screens.
+        return false;
     }
 
     public function enqueue_frontend_assets() {

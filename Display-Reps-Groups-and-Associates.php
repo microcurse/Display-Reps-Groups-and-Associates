@@ -24,6 +24,7 @@
  define('REP_GROUP_VERSION', '1.0.0');
  define('REP_GROUP_PATH', plugin_dir_path(__FILE__));
  define('REP_GROUP_URL', plugin_dir_url(__FILE__));
+ define('REP_GROUP_DEFAULT_REGION_COLOR', '#CCCCCC');
  
  // Autoload classes
  spl_autoload_register(function ($class) {
@@ -40,21 +41,6 @@
      
      // Build file path
      $file_path = REP_GROUP_PATH . 'includes/' . $file_name;
-
-     // For Map_Settings, the path is different
-     if ($class_name === 'Map_Settings') {
-        $file_path = REP_GROUP_PATH . 'includes/class-map-settings.php';
-     }
-
-     // For Shortcode class
-     if ($class_name === 'Shortcode') {
-        $file_path = REP_GROUP_PATH . 'includes/class-shortcode.php';
-     }
-
-     // For Asset_Manager class
-     if ($class_name === 'Asset_Manager') {
-        $file_path = REP_GROUP_PATH . 'includes/class-asset-manager.php';
-     }
      
      // Include file if it exists
      if (file_exists($file_path)) {
@@ -69,6 +55,9 @@
      new Shortcode(); // Add this line
      new Asset_Manager(); // Add this line
      new Map_Editor_Page(); // Add this line
+     new Post_Type();
+     new Import_Export();
+     new Taxonomy_Manager();
  }
  
  add_action('plugins_loaded', 'RepGroup\\init_rep_group_plugin');

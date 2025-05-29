@@ -12,7 +12,6 @@ class Map_Editor_Page {
         'local' => 'rep_group_local_map_links',
         'international' => 'rep_group_international_map_links'
     ];
-    const DEFAULT_REGION_COLOR = '#CCCCCC'; // Default color for regions
 
     public function __construct() {
         add_action( 'admin_menu', [ $this, 'add_admin_menu_page' ] );
@@ -58,61 +57,125 @@ class Map_Editor_Page {
         return $output;
     }
 
-    private function get_formatted_phone_numbers_html($phone_repeater_field_value, $is_sub_field = false) {
+    private function _render_phone_numbers_html( $phone_data_array, $is_associate_field = false ) {
         $output = '';
-        if (empty($phone_repeater_field_value)) return $output;
-        
-        // If it's from have_rows context, $phone_repeater_field_value is not needed as argument.
-        // This helper assumes the array of rows is passed directly.
+        if (empty($phone_data_array)) return $output;
 
         $phones_html_list = '';
-        foreach ($phone_repeater_field_value as $row) {
-            $phone_type_field = $is_sub_field ? $row['rep_phone_type'] : $row['rg_phone_type']; // ACF field names differ
-            $phone_number     = $is_sub_field ? $row['rep_phone_number'] : $row['rg_phone_number'];
-            $phone_type_label = is_array($phone_type_field) ? $phone_type_field['label'] : $phone_type_field;
+        foreach ($phone_data_array as $row) {
+            $phone_type_field = $is_associate_field ? ($row['rep_phone_type'] ?? null) : ($row['rg_phone_type'] ?? null);
+            $phone_number     = $is_associate_field ? ($row['rep_phone_number'] ?? null) : ($row['rg_phone_number'] ?? null);
+            
+            $phone_type_label = '';
+            if (is_array($phone_type_field) && isset($phone_type_field['label'])) {
+                $phone_type_label = $phone_type_field['label'];
+            } elseif (is_string($phone_type_field)) {
+                $phone_type_label = $phone_type_field; // Fallback if it's not an array (though ACF usually returns array for choice fields)
+            }
 
             if ($phone_number) {
                 $phones_html_list .= '<p class="contact-item phone"><ion-icon name="call" aria-hidden="true"></ion-icon> ';
                 if ($phone_type_label) {
                     $phones_html_list .= '<strong>' . esc_html($phone_type_label) . ':</strong> ';
                 }
-                $clean_phone_number = preg_replace('/[^\\d+]/ ', '', $phone_number);
+                $clean_phone_number = preg_replace('/[^\\d+]/', '', $phone_number); // Removed space from regex
                 $phones_html_list .= '<a href="tel:' . esc_attr($clean_phone_number) . '">' . esc_html($phone_number) . '</a></p>';
             }
         }
         if ($phones_html_list) {
-            $output = '<div class="phone-numbers-list">' . $phones_html_list . '</div>';
+            $output = '<div class="phone-numbers-list' . ($is_associate_field ? ' associate-phones' : '') . '">' . $phones_html_list . '</div>';
         }
         return $output;
     }
-    
-    // Specific helper for sub_field repeater for associates
-    private function get_formatted_associate_phones_html() {
+
+    private function _render_rep_group_details_html( $post_id ) {
+        $output = '<div class="rep-group-main-details">';
+
+        $rg_address_data = get_field('rg_address_container', $post_id);
+        if ($rg_address_data) {
+            $output .= $this->get_formatted_address_html($rg_address_data, 'rg_');
+        }
+        
+        $rg_phones_data = get_field('rg_phone_numbers', $post_id); // Repeater field
+        if ($rg_phones_data) {
+            $output .= $this->_render_phone_numbers_html($rg_phones_data, false); // false for not an associate field
+        }
+
+        $rg_email_data = get_field('rg_email', $post_id);
+        if ($rg_email_data) {
+            $output .= $this->get_formatted_email_html($rg_email_data);
+        }
+        $output .= '</div>'; // end .rep-group-main-details
+        return $output;
+    }
+
+    private function _render_rep_associates_html( $post_id ) {
         $output = '';
-        $phones_html_list = '';
-        if (have_rows('rep_phone_numbers')) { // This is the sub-field repeater for associates
-            while (have_rows('rep_phone_numbers')) {
-                the_row();
-                $phone_type_field = get_sub_field('rep_phone_type');
-                $phone_number = get_sub_field('rep_phone_number');
-                $phone_type_label = is_array($phone_type_field) ? $phone_type_field['label'] : $phone_type_field;
+        if ( have_rows( 'rep_associates', $post_id ) ) {
+            $output .= '<h5 class="rep-associates-section-title">' . esc_html__('Rep Associates', 'rep-group') . '</h5>';
+            $output .= '<div class="rep-associates-list">';
+            
+            $associates_items = [];
+            while ( have_rows( 'rep_associates', $post_id ) ) {
+                the_row(); // Sets up sub-field context for get_sub_field()
+                $associate_item_html = '<div class="rep-associate-item">';
+                $associate_name = get_sub_field('name');
 
-                if ($phone_number) {
-                    $phones_html_list .= '<p class="contact-item phone"><ion-icon name="call" aria-hidden="true"></ion-icon> ';
-                    if ($phone_type_label) {
-                        $phones_html_list .= '<strong>' . esc_html($phone_type_label) . ':</strong> ';
-                    }
-                    $clean_phone_number = preg_replace('/[^\\d+]/ ', '', $phone_number);
-                    $phones_html_list .= '<a href="tel:' . esc_attr($clean_phone_number) . '">' . esc_html($phone_number) . '</a></p>';
+                if ($associate_name) {
+                    $associate_item_html .= '<h6 class="rep-associate-name">' . esc_html($associate_name) . '</h6>';
                 }
+
+                $assoc_areas_served_value = get_sub_field('areas_served');
+                $area_names_to_display = [];
+
+                if (is_array($assoc_areas_served_value) && !empty($assoc_areas_served_value)) {
+                    foreach ($assoc_areas_served_value as $term_id) {
+                        $term = get_term($term_id, 'area-served');
+                        if ($term instanceof \WP_Term && !is_wp_error($term)) {
+                            $area_names_to_display[] = esc_html($term->name);
+                        }
+                    }
+                } elseif ($assoc_areas_served_value instanceof \WP_Term && !empty($assoc_areas_served_value->name)) {
+                    $area_names_to_display[] = esc_html($assoc_areas_served_value->name);
+                }
+
+                if (!empty($area_names_to_display)) {
+                     $associate_item_html .= '<p class="rep-associate-area"><strong>' . esc_html__('Serves:', 'rep-group') . '</strong> ' . implode(', ', $area_names_to_display) . '</p>';
+                }
+                
+                $assoc_address_field_value = get_sub_field('address');
+                if (is_array($assoc_address_field_value) && !empty(array_filter($assoc_address_field_value))) { 
+                    $associate_item_html .= $this->get_formatted_address_html($assoc_address_field_value, ''); // Pass empty prefix
+                } elseif (is_string($assoc_address_field_value) && !empty(trim($assoc_address_field_value))) {
+                    $associate_item_html .= '<div class="address-details associate-address"><p>' . nl2br(esc_html($assoc_address_field_value)) . '</p></div>';
+                }
+
+                // Fetch phone data for the associate using get_sub_field
+                $assoc_phones_data = get_sub_field('rep_phone_numbers'); // This is the repeater sub-field for associates
+                if ($assoc_phones_data) { // This will be an array of rows
+                    $associate_item_html .= $this->_render_phone_numbers_html($assoc_phones_data, true); // true because it's an associate
+                }
+
+                $assoc_email_text = get_sub_field('email');
+                if ($assoc_email_text) {
+                    $associate_item_html .= $this->get_formatted_email_html($assoc_email_text);
+                }
+                $associate_item_html .= '</div>'; // end .rep-associate-item
+                $associates_items[] = ['name' => $associate_name ? strtolower($associate_name) : '', 'html' => $associate_item_html];
             }
-        }
-        if ($phones_html_list) {
-            $output = '<div class="phone-numbers-list associate-phones">' . $phones_html_list . '</div>';
+
+            // Sort associates by name
+            usort($associates_items, function($a, $b) {
+                return strcmp($a['name'], $b['name']);
+            });
+
+            foreach ($associates_items as $item) {
+                $output .= $item['html'];
+            }
+            $output .= '</div>'; // end .rep-associates-list
         }
         return $output;
     }
-
 
     private function get_formatted_email_html($email_address) {
         $output = '';
@@ -156,7 +219,7 @@ class Map_Editor_Page {
                 'map_not_configured' => __( 'SVG Map URL for this type is not configured in Map Settings.', 'rep-group' ),
                 'error_loading_svg' => __( 'Error loading SVG. Please check the console.', 'rep-group' ),
             ],
-            'default_color' => self::DEFAULT_REGION_COLOR
+            'default_color' => REP_GROUP_DEFAULT_REGION_COLOR
         ];
         wp_localize_script( 'rep-group-map-linker-admin-js', 'RepMapLinkerData', $localized_data );
     }
@@ -207,7 +270,7 @@ class Map_Editor_Page {
 
                 <div class="control-group">
                     <label for="rep-map-region-color"><?php _e( 'Region Color:', 'rep-group' ); ?></label>
-                    <input type="text" id="rep-map-region-color" class="rep-map-color-picker" value="<?php echo esc_attr(self::DEFAULT_REGION_COLOR); ?>" disabled />
+                    <input type="text" id="rep-map-region-color" class="rep-map-color-picker" value="<?php echo esc_attr(REP_GROUP_DEFAULT_REGION_COLOR); ?>" disabled />
                 </div>
                 
                 <div class="control-group actions">
@@ -248,10 +311,10 @@ class Map_Editor_Page {
         // Ensure defaults for old data structure
         foreach ($links as $svg_id => $data) {
             if (!is_array($data)) {
-                $links[$svg_id] = ['term_id' => $data, 'color' => self::DEFAULT_REGION_COLOR];
+                $links[$svg_id] = ['term_id' => $data, 'color' => REP_GROUP_DEFAULT_REGION_COLOR];
             }
             if (!isset($data['color'])){
-                 $links[$svg_id]['color'] = self::DEFAULT_REGION_COLOR;
+                 $links[$svg_id]['color'] = REP_GROUP_DEFAULT_REGION_COLOR;
             }
         }
         wp_send_json_success( $links );
@@ -266,13 +329,13 @@ class Map_Editor_Page {
         $map_type       = isset( $_POST['map_type'] ) ? sanitize_key( $_POST['map_type'] ) : null;
         $svg_region_id  = isset( $_POST['svg_region_id'] ) ? sanitize_text_field( $_POST['svg_region_id'] ) : null;
         $term_id        = isset( $_POST['term_id'] ) ? absint( $_POST['term_id'] ) : null;
-        $color          = isset( $_POST['color'] ) ? sanitize_hex_color( $_POST['color'] ) : self::DEFAULT_REGION_COLOR;
+        $color          = isset( $_POST['color'] ) ? sanitize_hex_color( $_POST['color'] ) : REP_GROUP_DEFAULT_REGION_COLOR;
 
         if ( ! $map_type || ! $svg_region_id || ! $term_id || ! array_key_exists( $map_type, $this->option_names ) ) {
             wp_send_json_error( [ 'message' => __( 'Missing or invalid data.', 'rep-group' ) ] );
         }
         if ( ! $color ) { // sanitize_hex_color returns empty for invalid
-            $color = self::DEFAULT_REGION_COLOR;
+            $color = REP_GROUP_DEFAULT_REGION_COLOR;
         }
 
         $option_name = $this->option_names[$map_type];
@@ -349,98 +412,9 @@ class Map_Editor_Page {
                 $rep_groups_query->the_post();
                 $rep_group_id = get_the_ID();
                 $output_html .= '<div class="rep-group-item">';
-
-                // --- Rep Group's Own Details ---
-                $output_html .= '<div class="rep-group-main-details">';
-                $output_html .= '<h4 class="rep-group-title">' . get_the_title() . '</h4>';
-
-                $rg_address_data = get_field('rg_address_container', $rep_group_id);
-                if ($rg_address_data) {
-                    $output_html .= $this->get_formatted_address_html($rg_address_data, 'rg_');
-                }
-                
-                $rg_phones_data = get_field('rg_phone_numbers', $rep_group_id); // Repeater field
-                if ($rg_phones_data) { // This will be an array of rows
-                    $output_html .= $this->get_formatted_phone_numbers_html($rg_phones_data, false); // false for not a sub_field
-                }
-
-                $rg_email_data = get_field('rg_email', $rep_group_id);
-                if ($rg_email_data) {
-                    $output_html .= $this->get_formatted_email_html($rg_email_data);
-                }
-                $output_html .= '</div>'; // end .rep-group-main-details
-
-                // --- Rep Associates ---
-                if ( have_rows( 'rep_associates', $rep_group_id ) ) {
-                    $output_html .= '<h5 class="rep-associates-section-title">' . esc_html__('Rep Associates', 'rep-group') . '</h5>';
-                    $output_html .= '<div class="rep-associates-list">';
-                    
-                    $associates_items = []; // For sorting
-                    while ( have_rows( 'rep_associates', $rep_group_id ) ) {
-                        the_row();
-                        $associate_item_html = '<div class="rep-associate-item">';
-                        $associate_name = get_sub_field('name');
-
-                        if ($associate_name) {
-                            $associate_item_html .= '<h6 class="rep-associate-name">' . esc_html($associate_name) . '</h6>';
-                        }
-
-                        // Debugging line for areas_served (can be removed after fix)
-                        // error_log(\'[DEBUG] Associate: \' . $associate_name . \' - areas_served raw value: \' . print_r($assoc_areas_served_value, true));
-
-                        $assoc_areas_served_value = get_sub_field('areas_served');
-                        $area_names_to_display = [];
-
-                        if (is_array($assoc_areas_served_value) && !empty($assoc_areas_served_value)) {
-                            foreach ($assoc_areas_served_value as $term_id) {
-                                $term = get_term($term_id, 'area-served'); // Specify taxonomy
-                                if ($term instanceof \WP_Term && !is_wp_error($term)) {
-                                    $area_names_to_display[] = esc_html($term->name);
-                                }
-                            }
-                        } elseif ($assoc_areas_served_value instanceof \WP_Term && !empty($assoc_areas_served_value->name)) {
-                            // Fallback if it somehow returns a single Term object (though debug shows array)
-                            $area_names_to_display[] = esc_html($assoc_areas_served_value->name);
-                        }
-
-                        if (!empty($area_names_to_display)) {
-                             $associate_item_html .= '<p class="rep-associate-area"><strong>' . esc_html__('Serves:', 'rep-group') . '</strong> ' . implode(', ', $area_names_to_display) . '</p>';
-                        }
-                        
-                        $assoc_address_field_value = get_sub_field('address');
-                        if (is_array($assoc_address_field_value) && !empty(array_filter($assoc_address_field_value))) { 
-                            // If it's an array (like an ACF address group), pass it to the formatter.
-                            // The formatter get_formatted_address_html expects keys like 'address_1', 'city', etc. without a prefix if $prefix is empty.
-                            $associate_item_html .= $this->get_formatted_address_html($assoc_address_field_value, ''); // Pass empty prefix
-                        } elseif (is_string($assoc_address_field_value) && !empty(trim($assoc_address_field_value))) {
-                            // Fallback if it's just a simple text string and not empty
-                            $associate_item_html .= '<div class="address-details associate-address"><p>' . nl2br(esc_html($assoc_address_field_value)) . '</p></div>';
-                        } else {
-                            // Address is empty or not in a recognized format, skip.
-                        }
-
-                        $associate_item_html .= $this->get_formatted_associate_phones_html();
-
-                        $assoc_email_text = get_sub_field('email');
-                        if ($assoc_email_text) {
-                            $associate_item_html .= $this->get_formatted_email_html($assoc_email_text);
-                        }
-                        $associate_item_html .= '</div>'; // end .rep-associate-item
-                        $associates_items[] = ['name' => $associate_name ? strtolower($associate_name) : '', 'html' => $associate_item_html];
-                    }
-
-                    // Sort associates by name
-                    usort($associates_items, function($a, $b) {
-                        return strcmp($a['name'], $b['name']);
-                    });
-
-                    foreach ($associates_items as $item) {
-                        $output_html .= $item['html'];
-                    }
-                    $output_html .= '</div>'; // end .rep-associates-list
-                } else {
-                    // $output_html .= '<p><em>' . __('No associates listed for this group.', 'rep-group') . '</em></p>'; // Optional: message if no associates
-                }
+                $output_html .= '<h4 class="rep-group-title">' . get_the_title() . '</h4>'; // Title for group in area listing
+                $output_html .= $this->_render_rep_group_details_html($rep_group_id);
+                $output_html .= $this->_render_rep_associates_html($rep_group_id);
                 $output_html .= '</div>'; // .rep-group-item
             }
             wp_reset_postdata();
@@ -478,94 +452,9 @@ class Map_Editor_Page {
         $output_html .= '<h3><span class="area-name-highlighted">' . esc_html( get_the_title($rep_group_id) ) . '</span></h3>'; // No specific area color for this context
         
         $output_html .= '<div class="rep-group-item"> <!-- Re-use class for consistent styling -->';
-        // --- Rep Group's Own Details ---
-        $output_html .= '<div class="rep-group-main-details">' ; // Removed h4 title as it's already in h3
-
-        $rg_address_data = get_field('rg_address_container', $rep_group_id);
-        if ($rg_address_data) {
-            $output_html .= $this->get_formatted_address_html($rg_address_data, 'rg_');
-        }
-        
-        $rg_phones_data = get_field('rg_phone_numbers', $rep_group_id);
-        if ($rg_phones_data) {
-            $output_html .= $this->get_formatted_phone_numbers_html($rg_phones_data, false);
-        }
-
-        $rg_email_data = get_field('rg_email', $rep_group_id);
-        if ($rg_email_data) {
-            $output_html .= $this->get_formatted_email_html($rg_email_data);
-        }
-        $output_html .= '</div>'; // end .rep-group-main-details
-
-        // --- Rep Associates ---
-        if ( have_rows( 'rep_associates', $rep_group_id ) ) {
-            $output_html .= '<h5 class="rep-associates-section-title">' . esc_html__('Rep Associates', 'rep-group') . '</h5>';
-            $output_html .= '<div class="rep-associates-list">' ;
-            
-            $associates_items = [];
-            while ( have_rows( 'rep_associates', $rep_group_id ) ) {
-                the_row(); // Sets up sub-field context
-                $associate_item_html = '<div class="rep-associate-item">' ;
-                $associate_name = get_sub_field('name');
-
-                if ($associate_name) {
-                    $associate_item_html .= '<h6 class="rep-associate-name">' . esc_html($associate_name) . '</h6>';
-                }
-
-                // Debugging line for areas_served (can be removed after fix)
-                // error_log(\'[DEBUG] Associate: \' . $associate_name . \' - areas_served raw value: \' . print_r($assoc_areas_served_value, true));
-
-                $assoc_areas_served_value = get_sub_field('areas_served');
-                $area_names_to_display = [];
-
-                if (is_array($assoc_areas_served_value) && !empty($assoc_areas_served_value)) {
-                    foreach ($assoc_areas_served_value as $term_id) {
-                        $term = get_term($term_id, 'area-served'); // Specify taxonomy
-                        if ($term instanceof \WP_Term && !is_wp_error($term)) {
-                            $area_names_to_display[] = esc_html($term->name);
-                        }
-                    }
-                } elseif ($assoc_areas_served_value instanceof \WP_Term && !empty($assoc_areas_served_value->name)) {
-                    // Fallback if it somehow returns a single Term object (though debug shows array)
-                    $area_names_to_display[] = esc_html($assoc_areas_served_value->name);
-                }
-
-                if (!empty($area_names_to_display)) {
-                     $associate_item_html .= '<p class="rep-associate-area"><strong>' . esc_html__('Serves:', 'rep-group') . '</strong> ' . implode(', ', $area_names_to_display) . '</p>';
-                }
-                
-                $assoc_address_field_value = get_sub_field('address');
-                if (is_array($assoc_address_field_value) && !empty(array_filter($assoc_address_field_value))) { 
-                    // If it's an array (like an ACF address group), pass it to the formatter.
-                    // The formatter get_formatted_address_html expects keys like 'address_1', 'city', etc. without a prefix if $prefix is empty.
-                    $associate_item_html .= $this->get_formatted_address_html($assoc_address_field_value, ''); // Pass empty prefix
-                } elseif (is_string($assoc_address_field_value) && !empty(trim($assoc_address_field_value))) {
-                    // Fallback if it's just a simple text string and not empty
-                    $associate_item_html .= '<div class="address-details associate-address"><p>' . nl2br(esc_html($assoc_address_field_value)) . '</p></div>';
-                } else {
-                    // Address is empty or not in a recognized format, skip.
-                }
-
-                $associate_item_html .= $this->get_formatted_associate_phones_html();
-
-                $assoc_email_text = get_sub_field('email');
-                if ($assoc_email_text) {
-                    $associate_item_html .= $this->get_formatted_email_html($assoc_email_text);
-                }
-                $associate_item_html .= '</div>'; // end .rep-associate-item
-                $associates_items[] = ['name' => $associate_name ? strtolower($associate_name) : '', 'html' => $associate_item_html];
-            }
-
-            usort($associates_items, function($a, $b) {
-                return strcmp($a['name'], $b['name']);
-            });
-
-            foreach ($associates_items as $item) {
-                $output_html .= $item['html'];
-            }
-            $output_html .= '</div>'; // end .rep-associates-list
-        }
-        $output_html .= '</div>'; // end .rep-group-item
+        $output_html .= $this->_render_rep_group_details_html($rep_group_id);
+        $output_html .= $this->_render_rep_associates_html($rep_group_id);
+        $output_html .= '</div>'; // .rep-group-item
         
         // wp_reset_postdata(); // Reset if setup_postdata was used
         // $post = $original_post; // Restore global post object if changed
@@ -574,6 +463,5 @@ class Map_Editor_Page {
     }
 }
 
-// Instantiate the class if it's not already done by the main plugin loader
+// Instantiate the class if it's not already done by the main plugin loader.
 // For now, let's assume the main plugin file will initialize it.
-// If not, we might need: new Map_Editor_Page(); 
