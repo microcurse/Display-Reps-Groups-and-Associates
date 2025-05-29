@@ -26,6 +26,10 @@
  define('REP_GROUP_URL', plugin_dir_url(__FILE__));
  define('REP_GROUP_DEFAULT_REGION_COLOR', '#CCCCCC');
  
+ // ACF JSON Save and Load points - using Asset_Manager static methods
+ add_filter('acf/settings/save_json', ['RepGroup\\Asset_Manager', 'acf_json_save_point']);
+ add_filter('acf/settings/load_json', ['RepGroup\\Asset_Manager', 'acf_json_load_point']);
+ 
  // Autoload classes
  spl_autoload_register(function ($class) {
      // Check if the class is in our namespace

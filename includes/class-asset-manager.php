@@ -106,4 +106,15 @@ class Asset_Manager {
             wp_localize_script('rep-group-frontend-base', 'RepGroupData', $general_plugin_data);
         }
     }
+
+    // ACF JSON Callbacks
+    public static function acf_json_save_point( $path ) {
+        return REP_GROUP_PATH . 'acf-json';
+    }
+
+    public static function acf_json_load_point( $paths ) {
+        unset($paths[0]); // Remove the original path
+        $paths[] = REP_GROUP_PATH . 'acf-json'; // Add our plugin's path
+        return $paths;
+    }
 } 

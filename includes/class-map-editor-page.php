@@ -117,54 +117,77 @@ class Map_Editor_Page {
             
             $associates_items = [];
             while ( have_rows( 'rep_associates', $post_id ) ) {
-                the_row(); // Sets up sub-field context for get_sub_field()
+                the_row(); 
                 $associate_item_html = '<div class="rep-associate-item">';
-                $associate_name = get_sub_field('name');
 
-                if ($associate_name) {
-                    $associate_item_html .= '<h6 class="rep-associate-name">' . esc_html($associate_name) . '</h6>';
+                $user_id = get_sub_field('rep_user');
+                $user_data = $user_id ? get_userdata($user_id) : null;
+                $associate_name_for_sort = '';
+
+                if ($user_data) {
+                    $associate_item_html .= '<h6 class="rep-associate-name">' . esc_html($user_data->display_name) . '</h6>';
+                    $associate_name_for_sort = strtolower($user_data->display_name);
+                } else {
+                    $associate_item_html .= '<h6 class="rep-associate-name">' . esc_html__('Associate Name Not Found', 'rep-group') . '</h6>';
                 }
 
-                $assoc_areas_served_value = get_sub_field('areas_served');
+                $assoc_areas_served_value = get_sub_field('areas_served'); 
                 $area_names_to_display = [];
-
                 if (is_array($assoc_areas_served_value) && !empty($assoc_areas_served_value)) {
-                    foreach ($assoc_areas_served_value as $term_id) {
-                        $term = get_term($term_id, 'area-served');
+                    foreach ($assoc_areas_served_value as $term_id_or_object) {
+                        $term = null;
+                        if (is_object($term_id_or_object) && isset($term_id_or_object->term_id)) {
+                            $term = $term_id_or_object;
+                        } elseif (is_numeric($term_id_or_object)) {
+                            $term = get_term(intval($term_id_or_object), 'area-served');
+                        }
                         if ($term instanceof \WP_Term && !is_wp_error($term)) {
                             $area_names_to_display[] = esc_html($term->name);
                         }
                     }
-                } elseif ($assoc_areas_served_value instanceof \WP_Term && !empty($assoc_areas_served_value->name)) {
-                    $area_names_to_display[] = esc_html($assoc_areas_served_value->name);
                 }
-
                 if (!empty($area_names_to_display)) {
                      $associate_item_html .= '<p class="rep-associate-area"><strong>' . esc_html__('Serves:', 'rep-group') . '</strong> ' . implode(', ', $area_names_to_display) . '</p>';
                 }
                 
-                $assoc_address_field_value = get_sub_field('address');
-                if (is_array($assoc_address_field_value) && !empty(array_filter($assoc_address_field_value))) { 
-                    $associate_item_html .= $this->get_formatted_address_html($assoc_address_field_value, ''); // Pass empty prefix
-                } elseif (is_string($assoc_address_field_value) && !empty(trim($assoc_address_field_value))) {
-                    $associate_item_html .= '<div class="address-details associate-address"><p>' . nl2br(esc_html($assoc_address_field_value)) . '</p></div>';
+                $email_override = get_sub_field('rep_contact_email_override');
+                $phone_override = get_sub_field('rep_contact_phone_override');
+
+                $email_to_display = '';
+                if (!empty($email_override)) {
+                    $email_to_display = $email_override;
+                } elseif ($user_data && !empty($user_data->user_email)) {
+                    $email_to_display = $user_data->user_email;
+                }
+                if (!empty($email_to_display) && is_email($email_to_display)) {
+                    $associate_item_html .= sprintf(
+                        '<p class="contact-item email"><ion-icon name="mail" role="img" class="hydrated" aria-label="mail"></ion-icon> <a href="mailto:%s">%s</a></p>',
+                        esc_attr($email_to_display),
+                        esc_html($email_to_display)
+                    );
                 }
 
-                // Fetch phone data for the associate using get_sub_field
-                $assoc_phones_data = get_sub_field('rep_phone_numbers'); // This is the repeater sub-field for associates
-                if ($assoc_phones_data) { // This will be an array of rows
-                    $associate_item_html .= $this->_render_phone_numbers_html($assoc_phones_data, true); // true because it's an associate
+                $phone_to_display = '';
+                if (!empty($phone_override)) {
+                    $phone_to_display = $phone_override;
+                } elseif ($user_data) {
+                    $user_profile_phone = get_field('rep_primary_phone', 'user_' . $user_data->ID);
+                    if (!empty($user_profile_phone)) {
+                        $phone_to_display = $user_profile_phone;
+                    }
+                }
+                if (!empty($phone_to_display)) {
+                    $associate_item_html .= sprintf(
+                        '<p class="contact-item phone"><ion-icon name="call" role="img" class="hydrated" aria-label="call"></ion-icon> <a href="tel:%s">%s</a></p>',
+                        esc_attr(preg_replace('#[^0-9+ ]#', '', $phone_to_display)),
+                        esc_html($phone_to_display)
+                    );
                 }
 
-                $assoc_email_text = get_sub_field('email');
-                if ($assoc_email_text) {
-                    $associate_item_html .= $this->get_formatted_email_html($assoc_email_text);
-                }
-                $associate_item_html .= '</div>'; // end .rep-associate-item
-                $associates_items[] = ['name' => $associate_name ? strtolower($associate_name) : '', 'html' => $associate_item_html];
+                $associate_item_html .= '</div>';
+                $associates_items[] = ['name' => $associate_name_for_sort, 'html' => $associate_item_html];
             }
 
-            // Sort associates by name
             usort($associates_items, function($a, $b) {
                 return strcmp($a['name'], $b['name']);
             });

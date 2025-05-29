@@ -99,12 +99,19 @@ class Shortcode {
      */
     private function render_rep_associates($post_id) {
         $output = '<div class="rep-associates-section">';
-        $output .= '<h2 class="rep-section-title">Rep Associates</h2>';
+
         $output .= '<div class="rep-card-grid">';
         
-        while (have_rows('rep_associates', $post_id)) {
+        while (have_rows('rep_associates', $post_id)) { // ACF's have_rows() can be called multiple times
             the_row();
-            $output .= $this->render_rep_card();
+            // Get user data and overrides for the current associate row
+            $user_id = get_sub_field('rep_user');
+            $user_data = $user_id ? get_userdata($user_id) : null;
+            $email_override = get_sub_field('rep_contact_email_override');
+            $phone_override = get_sub_field('rep_contact_phone_override');
+            $areas_served = get_sub_field('areas_served');
+
+            $output .= $this->render_rep_card($user_data, $email_override, $phone_override, $areas_served);
         }
         
         $output .= '</div></div>';
@@ -114,40 +121,37 @@ class Shortcode {
     /**
      * Helper method to render individual rep card
      */
-    private function render_rep_card() {
+    private function render_rep_card($user_data, $email_override, $phone_override, $areas_served) {
         $output = '<div class="rep-card">';
 
-        $name = get_sub_field('name');
-        if ($name) {
-            $output .= sprintf('<h3 class="rep-name">%s</h3>', esc_html($name));
+        if ($user_data) {
+            $output .= sprintf('<h3 class="rep-name">%s</h3>', esc_html($user_data->display_name));
+        } else {
+            $output .= '<h3 class="rep-name">Associate Name Not Found</h3>';
         }
 
-        $assoc_areas_served_value = get_sub_field('areas_served');
         $area_names_to_display = [];
-        if (is_array($assoc_areas_served_value) && !empty($assoc_areas_served_value)) {
-            foreach ($assoc_areas_served_value as $term_id) {
-                $term = get_term($term_id, 'area-served'); // Assuming 'area-served' is the taxonomy slug
+        // Ensure $areas_served is an array of term IDs or objects as configured in ACF
+        if (is_array($areas_served) && !empty($areas_served)) {
+            foreach ($areas_served as $term_id_or_object) {
+                $term = null;
+                if (is_object($term_id_or_object) && isset($term_id_or_object->term_id)) {
+                     $term = $term_id_or_object; // It's already a WP_Term object
+                } elseif (is_numeric($term_id_or_object)) {
+                    $term = get_term(intval($term_id_or_object), 'area-served');
+                }
+
                 if ($term instanceof \WP_Term && !is_wp_error($term)) {
                     $area_names_to_display[] = esc_html($term->name);
                 }
             }
         }
         if (!empty($area_names_to_display)) {
-            $output .= sprintf('<p class="rep-territory"><strong>Area Served:</strong> %s</p>', implode(', ', $area_names_to_display));
-        }
-
-        // Rep Associate Address
-        $address = get_sub_field('address');
-        if ($address) {
-            $address_text = is_array($address) ? implode(', ', array_filter($address)) : $address;
-            $output .= '<div class="rep-address">';
-            $output .= '<strong>Address:</strong>';
-            $output .= sprintf('<p>%s</p>', esc_html($address_text));
-            $output .= '</div>';
+            $output .= sprintf('<p class="rep-territory"><strong>Serves:</strong> %s</p>', implode(', ', $area_names_to_display));
         }
 
         $output .= '<div class="rep-contact-info">';
-        $output .= $this->render_rep_contact_info();
+        $output .= $this->render_rep_contact_info($user_data, $email_override, $phone_override);
         $output .= '</div>';
 
         $output .= '</div>';
@@ -156,35 +160,50 @@ class Shortcode {
 
     /**
      * Helper method to render rep contact info
+     * Now accepts user_data and overrides
      */
-    private function render_rep_contact_info() {
+    private function render_rep_contact_info($user_data, $email_override, $phone_override) {
         $output = '';
 
-        if (have_rows('rep_phone_numbers')) {
-            while (have_rows('rep_phone_numbers')) {
-                the_row();
-                $phone_type = get_sub_field('rep_phone_type');
-                $phone_number = get_sub_field('rep_phone_number');
-                
-                $phone_type_text = is_array($phone_type) ? $phone_type['label'] : $phone_type;
-                
-                if ($phone_type && $phone_number) {
-                    $output .= sprintf(
-                        '<p class="rep-phone"><strong>%s:</strong> <a href="tel:%s">%s</a></p>',
-                        esc_html($phone_type_text),
-                        esc_attr($phone_number),
-                        esc_html($phone_number)
-                    );
-                }
+        // Display Phone (Override first, then potentially from user profile if we add that later)
+        $phone_to_display = ''; // Default to empty
+        $phone_type_text = 'Phone'; // Generic label, can be improved if we store phone type
+
+        if (!empty($phone_override)) {
+            $phone_to_display = $phone_override;
+            // Optionally, if you add a phone_type_override field:
+            // $phone_type_text = get_sub_field('rep_contact_phone_type_override') ?: 'Phone'; 
+        } elseif ($user_data) {
+            // Fallback to user profile field if override is not set
+            $user_profile_phone = get_field('rep_primary_phone', 'user_' . $user_data->ID);
+            if (!empty($user_profile_phone)) {
+                $phone_to_display = $user_profile_phone;
+                // Optionally, you might have a separate field for phone type on user profile too
             }
         }
 
-        $email = get_sub_field('email');
-        if ($email) {
+        if (!empty($phone_to_display)) {
             $output .= sprintf(
-                '<p class="rep-email"><strong>Email:</strong> <a href="mailto:%s">%s</a></p>',
-                esc_attr($email),
-                esc_html($email)
+                '<p class="rep-phone"><ion-icon name="call" role="img" class="hydrated" aria-label="call"></ion-icon> <strong>%s:</strong> <a href="tel:%s">%s</a></p>',
+                esc_html($phone_type_text),
+                esc_attr(preg_replace('/[^0-9+ ]/', '', $phone_to_display)),
+                esc_html($phone_to_display)
+            );
+        }
+
+        // Display Email (Override first, then from user profile)
+        $email_to_display = '';
+        if (!empty($email_override)) {
+            $email_to_display = $email_override;
+        } elseif ($user_data && !empty($user_data->user_email)) {
+            $email_to_display = $user_data->user_email;
+        }
+
+        if (!empty($email_to_display) && is_email($email_to_display)) {
+            $output .= sprintf(
+                '<p class="rep-email"><ion-icon name="mail" role="img" class="hydrated" aria-label="mail"></ion-icon> <strong>Email:</strong> <a href="mailto:%s">%s</a></p>',
+                esc_attr($email_to_display),
+                esc_html($email_to_display)
             );
         }
 
