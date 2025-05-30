@@ -315,6 +315,8 @@
     color: var(--text-color);
     height: 65vh;
     min-height: 400px;
+    width: 100%;
+    max-width: 1400px;
 }
 
 .rep-map-info-column {
@@ -525,6 +527,8 @@
 
 .rep-group-map-svg-object { 
     display: block;
+    width: 100%;
+    height: 100%;
     transform-origin: 0 0; 
     transition: transform 0.1s ease-out; 
     will-change: transform; 

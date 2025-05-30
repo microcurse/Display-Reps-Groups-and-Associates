@@ -417,7 +417,56 @@
       };
 
       const state = mapStates[mapInstanceId];
-      applyTransform(state); 
+
+      // Defer the dimension calculation and initial transform to the next animation frame
+      requestAnimationFrame(() => {
+          const viewportWidth = state.viewport.width();
+          const viewportHeight = state.viewport.height();
+
+          if (state.svgRoot && state.svgRoot.length && typeof state.svgRoot[0].getBBox === 'function') {
+              const svgBoundingBox = state.svgRoot[0].getBBox();
+              let svgWidth = svgBoundingBox.width;
+              let svgHeight = svgBoundingBox.height;
+
+              console.log(`RepMap (rAF): Viewport dimensions for ${mapInstanceId}: ${viewportWidth}x${viewportHeight}`);
+              console.log(`RepMap (rAF): SVG original dimensions for ${mapInstanceId}: ${svgWidth}x${svgHeight}`);
+
+              if (svgWidth > 0 && svgHeight > 0) {
+                  const viewportAspect = viewportWidth / viewportHeight;
+                  const svgAspect = svgWidth / svgHeight;
+                  let calculatedScale;
+
+                  if (viewportAspect < svgAspect) { // Viewport is "taller" or less wide than SVG
+                      calculatedScale = viewportHeight / svgHeight;
+                      console.log(`RepMap (rAF): Initial scale for ${mapInstanceId}: fitting to height. Scale: ${calculatedScale}`);
+                  } else { // Viewport is "wider" or less tall
+                      calculatedScale = viewportWidth / svgWidth;
+                      console.log(`RepMap (rAF): Initial scale for ${mapInstanceId}: fitting to width. Scale: ${calculatedScale}`);
+                  }
+
+                  if (calculatedScale > 0 && isFinite(calculatedScale)) {
+                      state.scale = calculatedScale;
+                      state.scale = Math.max(state.minScale, Math.min(state.maxScale, state.scale)); // Clamp scale
+                  } else {
+                      console.warn(`RepMap (rAF): Calculated scale ${calculatedScale} is invalid for ${mapInstanceId}. Using default state.scale: ${state.scale}`);
+                      // state.scale remains its default (1)
+                  }
+
+                  state.panX = (viewportWidth - svgWidth * state.scale) / 2;
+                  state.panY = (viewportHeight - svgHeight * state.scale) / 2;
+
+              } else {
+                  console.warn(`RepMap (rAF): SVG dimensions are zero or invalid for ${mapInstanceId} (w:${svgWidth}, h:${svgHeight}). Using default scale and pan.`);
+                  // state.scale, state.panX, state.panY remain their defaults
+              }
+          } else {
+              console.warn(`RepMap (rAF): svgRoot not available or getBBox not supported for ${mapInstanceId}. Using default scale and pan.`);
+              // state.scale, state.panX, state.panY remain their defaults
+          }
+
+          console.log(`RepMap (rAF): Applying initial transform for ${mapInstanceId}:`, JSON.parse(JSON.stringify(state)));
+          applyTransform(state);
+      });
 
       viewport.on('mousedown', function(event) {
           handlePanMouseDown(event.originalEvent, state, mapInstanceId);
