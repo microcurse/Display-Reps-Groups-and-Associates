@@ -27,9 +27,9 @@
                 {
                     "key": "field_68361cb7ce9d6",
                     "label": "Areas Served",
-                    "name": "areas_served",
+                    "name": "rep_specific_areas_text",
                     "aria-label": "",
-                    "type": "taxonomy",
+                    "type": "text",
                     "instructions": "",
                     "required": 0,
                     "conditional_logic": 0,
@@ -38,17 +38,12 @@
                         "class": "",
                         "id": ""
                     },
-                    "taxonomy": "area-served",
-                    "add_term": 1,
-                    "save_terms": 1,
-                    "load_terms": 0,
-                    "return_format": "id",
-                    "field_type": "multi_select",
-                    "allow_null": 0,
-                    "allow_in_bindings": 1,
-                    "bidirectional": 0,
-                    "multiple": 0,
-                    "bidirectional_target": [],
+                    "default_value": "",
+                    "maxlength": "",
+                    "allow_in_bindings": 0,
+                    "placeholder": "",
+                    "prepend": "",
+                    "append": "",
                     "parent_repeater": "field_6765c1ac168cd"
                 },
                 {
@@ -142,5 +137,5 @@
     "active": true,
     "description": "",
     "show_in_rest": 0,
-    "modified": 1748544837
+    "modified": 1748557862
 }

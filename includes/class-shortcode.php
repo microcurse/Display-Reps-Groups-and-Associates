@@ -5,6 +5,14 @@ class Shortcode {
     public function __construct() {
         add_shortcode('rep_group_display', [$this, 'render_rep_group_display']);
         add_shortcode('rep_map', [$this, 'render_rep_map']);
+
+        // AJAX handler for fetching rep group info when an area is clicked on the map
+        add_action('wp_ajax_get_rep_group_info_for_area', [$this, 'ajax_get_rep_group_info_for_area']);
+        add_action('wp_ajax_nopriv_get_rep_group_info_for_area', [$this, 'ajax_get_rep_group_info_for_area']);
+
+        // AJAX handler for fetching rep group details when a list item is clicked
+        add_action('wp_ajax_get_rep_group_details_by_id', [$this, 'ajax_get_rep_group_details_by_id']);
+        add_action('wp_ajax_nopriv_get_rep_group_details_by_id', [$this, 'ajax_get_rep_group_details_by_id']);
     }
 
     /**
@@ -102,16 +110,17 @@ class Shortcode {
 
         $output .= '<div class="rep-card-grid">';
         
-        while (have_rows('rep_associates', $post_id)) { // ACF's have_rows() can be called multiple times
-            the_row();
-            // Get user data and overrides for the current associate row
-            $user_id = get_sub_field('rep_user');
-            $user_data = $user_id ? get_userdata($user_id) : null;
-            $email_override = get_sub_field('rep_contact_email_override');
-            $phone_override = get_sub_field('rep_contact_phone_override');
-            $areas_served = get_sub_field('areas_served');
+        if (have_rows('rep_associates', $post_id)) { // Check before looping
+            while (have_rows('rep_associates', $post_id)) {
+                the_row();
+                $user_id = get_sub_field('rep_user');
+                $user_data = $user_id ? get_userdata($user_id) : null;
+                $email_override = get_sub_field('rep_contact_email_override');
+                $phone_override = get_sub_field('rep_contact_phone_override');
+                $associate_specific_areas = get_sub_field('associate_specific_areas_text'); // New text field
 
-            $output .= $this->render_rep_card($user_data, $email_override, $phone_override, $areas_served);
+                $output .= $this->render_rep_card($user_data, $email_override, $phone_override, $associate_specific_areas);
+            }
         }
         
         $output .= '</div></div>';
@@ -121,7 +130,7 @@ class Shortcode {
     /**
      * Helper method to render individual rep card
      */
-    private function render_rep_card($user_data, $email_override, $phone_override, $areas_served) {
+    private function render_rep_card($user_data, $email_override, $phone_override, $associate_specific_areas_text) {
         $output = '<div class="rep-card">';
 
         if ($user_data) {
@@ -130,24 +139,9 @@ class Shortcode {
             $output .= '<h3 class="rep-name">Associate Name Not Found</h3>';
         }
 
-        $area_names_to_display = [];
-        // Ensure $areas_served is an array of term IDs or objects as configured in ACF
-        if (is_array($areas_served) && !empty($areas_served)) {
-            foreach ($areas_served as $term_id_or_object) {
-                $term = null;
-                if (is_object($term_id_or_object) && isset($term_id_or_object->term_id)) {
-                     $term = $term_id_or_object; // It's already a WP_Term object
-                } elseif (is_numeric($term_id_or_object)) {
-                    $term = get_term(intval($term_id_or_object), 'area-served');
-                }
-
-                if ($term instanceof \WP_Term && !is_wp_error($term)) {
-                    $area_names_to_display[] = esc_html($term->name);
-                }
-            }
-        }
-        if (!empty($area_names_to_display)) {
-            $output .= sprintf('<p class="rep-territory"><strong>Serves:</strong> %s</p>', implode(', ', $area_names_to_display));
+        // Display associate specific areas text
+        if (!empty($associate_specific_areas_text)) {
+            $output .= sprintf('<p class="rep-territory"><strong>Specific Areas:</strong> %s</p>', esc_html($associate_specific_areas_text));
         }
 
         $output .= '<div class="rep-contact-info">';
@@ -223,17 +217,6 @@ class Shortcode {
         $map_type = strtolower($attributes['type']);
         $is_interactive = filter_var($attributes['interactive'], FILTER_VALIDATE_BOOLEAN);
         $svg_url = '';
-        $map_links_option_name = ($map_type === 'local') ? 'rep_group_local_map_links' : 'rep_group_international_map_links';
-        $map_links = get_option($map_links_option_name, []);
-
-        foreach ($map_links as $svg_id => $data) {
-            if (!is_array($data)) {
-                $map_links[$svg_id] = ['term_id' => $data, 'color' => REP_GROUP_DEFAULT_REGION_COLOR];
-            }
-            if (!isset($map_links[$svg_id]['color'])){
-                 $map_links[$svg_id]['color'] = REP_GROUP_DEFAULT_REGION_COLOR;
-            }
-        }
 
         if ($map_type === 'local') {
             $svg_url = get_option('rep_group_local_svg');
@@ -248,76 +231,372 @@ class Shortcode {
         $map_instance_id = 'rep-map-instance-' . esc_attr($map_type) . '-' . wp_generate_uuid4();
         $output = sprintf(
             '<div id="%s" class="rep-group-map-interactive-area %s-map-interactive-area">',
-            $map_instance_id,
+            esc_attr($map_instance_id),
             esc_attr($map_type)
         );
-
-        // --- Default content for info column: List of all rep groups ---
-        $default_content_html = '<p>' . __('No Rep Groups found.', 'rep-group') . '</p>';
-        $all_rep_groups_args = [
-            'post_type' => 'rep-group',
-            'posts_per_page' => -1,
-            'orderby' => 'title',
-            'order' => 'ASC'
-        ];
-        $all_rep_groups_query = new \WP_Query($all_rep_groups_args);
-        if ($all_rep_groups_query->have_posts()) {
-            $default_content_html = '<h3 class="default-list-title">' . __('All Rep Groups', 'rep-group') . '</h3>';
-            $default_content_html .= '<ul class="default-rep-group-list">';
-            while ($all_rep_groups_query->have_posts()) {
-                $all_rep_groups_query->the_post();
-                $rep_group_id = get_the_ID();
-                $default_content_html .= sprintf('<li data-rep-group-id="%s"><a href="#" class="rep-group-list-item-link">%s</a></li>', 
-                    esc_attr($rep_group_id), 
-                    get_the_title()
-                );
-            }
-            $default_content_html .= '</ul>';
-            wp_reset_postdata();
-        }
-        // --- End default content generation ---
-
+        // Two-column layout: Info Panel (Left), Map (Right)
         $output .= '<div class="rep-map-info-column">';
-        $output .= '  <div class="rep-map-default-content panel-active">';
-        $output .= $default_content_html;
-        $output .= '  </div>';
-        $output .= '  <div class="rep-map-details-content panel-hidden">';
-        $output .= '    <a href="#" class="back-to-map-default" role="button">&laquo; ' . __('Back to Overview', 'rep-group') . '</a>';
-        $output .= '    <div class="rep-group-info-target"></div>';
-        $output .= '  </div>';
+        // Default content for the info column (e.g., list of all rep groups)
+        $output .= '<div class="rep-map-default-content panel-active">';
+        $output .= '<h4>All Rep Groups</h4>';
+        $output .= $this->get_all_rep_groups_list_html($map_instance_id); // Pass map_instance_id
         $output .= '</div>';
+        // Placeholder for detailed rep group info when an area is clicked
+        $output .= '<div class="rep-map-details-content panel-hidden">';
+        $output .= '<a href="#" class="back-to-map-default" role="button">&laquo; Back to Overview</a>';
+        $output .= '<div class="rep-group-info-target"></div>';
+        $output .= '</div>'; // End rep-map-details-content
+        $output .= '</div>'; // End rep-map-info-column
 
         $output .= '<div class="rep-map-svg-column">';
         $output .= sprintf(
-            '<object type="image/svg+xml" data="%s" class="rep-group-map-svg"></object>',
-            esc_url($svg_url)
+            '<object id="rep-map-svg-%s" class="rep-group-map-svg-object" type="image/svg+xml" data="%s" aria-label="%s map"></object>',
+            esc_attr($map_type),
+            esc_url($svg_url),
+            esc_attr(ucfirst($map_type))
         );
-        $output .= '</div>';
+        $output .= '</div>'; // End rep-map-svg-column
+        $output .= '</div>'; // End rep-group-map-interactive-area
 
-        $output .= '</div>'; // End #map_instance_id
+        // Prepare data for frontend JavaScript
+        $area_colors_and_terms = [];
+        $rep_groups_query_args = [
+            'post_type' => 'rep-group',
+            'posts_per_page' => -1,
+            'post_status' => 'publish',
+        ];
+        $rep_groups = get_posts($rep_groups_query_args);
 
-        if ($is_interactive) {
-            if (!wp_script_is('rep-group-frontend-map-js', 'enqueued')) {
-                wp_enqueue_script(
-                    'rep-group-frontend-map-js',
-                    REP_GROUP_URL . 'assets/js/frontend-map-display.js',
-                    ['jquery'],
-                    REP_GROUP_VERSION,
-                    true
-                );
+        foreach ($rep_groups as $rep_group) {
+
+            $color = get_field('rep_group_map_color', $rep_group->ID);
+            if (empty($color)) {
+                $color = REP_GROUP_DEFAULT_REGION_COLOR; // Use defined default color
             }
-            $localized_data = [
-                'map_id'        => $map_instance_id, // Pass the main container ID
-                'svg_url'       => esc_url($svg_url),
-                'map_links'     => $map_links,
-                'default_color' => REP_GROUP_DEFAULT_REGION_COLOR,
-                'ajax_url'      => admin_url('admin-ajax.php'),
-                'nonce'         => wp_create_nonce('rep_group_frontend_map_nonce') // Nonce for frontend AJAX
-            ];
-            // Ensure a unique JS object name for each map instance data
-            wp_localize_script('rep-group-frontend-map-js', 'RepMapData_' . str_replace('-', '_', $map_instance_id), $localized_data);
+            $terms = get_the_terms($rep_group->ID, 'area-served');
+
+            if ($terms && !is_wp_error($terms)) {
+                foreach ($terms as $term) {
+
+                    // USE THE CUSTOM META FIELD FOR SVG ID
+                    $svg_id_meta = get_term_meta($term->term_id, '_rep_svg_target_id', true);
+                    
+
+                    if (!empty($svg_id_meta)) {
+                        $svg_id_key = ltrim($svg_id_meta, '#');
+                        $area_colors_and_terms[$svg_id_key] = [
+                            'color' => $color,
+                            'term_id' => $term->term_id,
+                            'term_name' => $term->name,
+                            'term_slug' => $term->slug
+                        ];
+                    } else {
+                        // Fallback or skip if SVG ID meta is not set for a term
+                    }
+                }
+            }
         }
+        
+        wp_enqueue_style('rep-group-frontend-map', REP_GROUP_URL . 'assets/css/frontend.css', [], REP_GROUP_VERSION);
+        wp_enqueue_script('rep-group-frontend-map', REP_GROUP_URL . 'assets/js/frontend-map-display.js', ['jquery', 'wp-util'], REP_GROUP_VERSION, true);
+        wp_localize_script('rep-group-frontend-map', 'RepMapData_' . str_replace('-', '_', $map_instance_id), [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('rep_map_nonce'),
+            'svg_url' => $svg_url,
+            'area_data' => $area_colors_and_terms, // New: term slug -> {color, term_id, term_name}
+            'map_id' => esc_attr($map_instance_id),
+            'default_region_color' => REP_GROUP_DEFAULT_REGION_COLOR,
+            'is_interactive' => $is_interactive,
+        ]);
 
         return $output;
     }
-}
+
+    /**
+     * AJAX handler to get rep group information for a clicked area (SVG region).
+     * Expects 'area_slug' (which is the SVG region ID and term slug).
+     */
+    public function ajax_get_rep_group_info_for_area() {
+        check_ajax_referer('rep_map_nonce', 'nonce');
+
+        $svg_id_clicked = isset($_POST['area_slug']) ? sanitize_text_field($_POST['area_slug']) : ''; // Parameter from JS is svg_id
+        // error_log("AJAX: Received svg_id_clicked: " . $svg_id_clicked);
+
+        if (empty($svg_id_clicked)) {
+            // error_log("AJAX ERROR: svg_id_clicked is empty.");
+            wp_send_json_error(['message' => 'Area SVG identifier not provided.']);
+            return;
+        }
+
+        // Find the term by its SVG ID meta field
+        $term_args = [
+            'taxonomy' => 'area-served',
+            'hide_empty' => false,
+            'meta_query' => [
+                [
+                    'key' => '_rep_svg_target_id',
+                    'value' => $svg_id_clicked,
+                    'compare' => '='
+                ]
+            ],
+            'number' => 1 // We expect only one term for a given SVG ID
+        ];
+        $terms_found = get_terms($term_args);
+        // error_log("AJAX: Terms found based on _rep_svg_target_id = " . $svg_id_clicked . ": " . print_r($terms_found, true));
+
+        if (empty($terms_found) || is_wp_error($terms_found)) {
+            // if (is_wp_error($terms_found)) error_log("AJAX ERROR: WP_Error finding term: " . $terms_found->get_error_message());
+            // else error_log("AJAX ERROR: No terms found for svg_id_clicked: " . $svg_id_clicked);
+            wp_send_json_error(['message' => 'Area not found for SVG identifier: ' . esc_html($svg_id_clicked)]);
+            return;
+        }
+        
+        $term = $terms_found[0]; // Get the first (and should be only) term
+        // error_log("AJAX: Using term: " . print_r($term, true));
+
+        $args = [
+            'post_type' => 'rep-group',
+            'posts_per_page' => 1, // Expecting only one due to validation
+            'tax_query' => [
+                [
+                    'taxonomy' => 'area-served',
+                    'field'    => 'term_id', // Query by the term_id we just found
+                    'terms'    => $term->term_id,
+                ],
+            ],
+        ];
+        $rep_groups_query = new \WP_Query($args);
+        // error_log("AJAX: Rep groups query args: " . print_r($args, true));
+        // error_log("AJAX: Rep groups found: " . $rep_groups_query->found_posts);
+
+        if ($rep_groups_query->have_posts()) {
+            $rep_groups_query->the_post();
+            $post_id = get_the_ID();
+            // error_log("AJAX: Found Rep Group Post ID: " . $post_id . " Title: " . get_the_title());
+            
+            $rep_group_color = get_field('rep_group_map_color', $post_id);
+            if (empty($rep_group_color)) {
+                $rep_group_color = REP_GROUP_DEFAULT_REGION_COLOR;
+            }
+            // error_log("AJAX: Rep Group Color: " . $rep_group_color);
+
+            $html = $this->render_rep_group_details_html($post_id, $term->name, $rep_group_color);
+            // error_log("AJAX: HTML generated, sending success.");
+            wp_send_json_success(['html' => $html, 'term_name' => $term->name, 'color' => $rep_group_color]);
+        } else {
+            // error_log("AJAX ERROR: No Rep Group found for term_id: " . $term->term_id . " (Term name: " . $term->name . ")");
+            wp_send_json_error(['message' => 'No Rep Group found for area: ' . esc_html($term->name)]);
+        }
+        wp_reset_postdata(); // Should be called after custom WP_Query loops
+    }
+    
+    /**
+     * AJAX handler to get rep group details by ID (for list item clicks).
+     */
+    public function ajax_get_rep_group_details_by_id() {
+        check_ajax_referer('rep_map_nonce', 'nonce');
+
+        $rep_group_id = isset($_POST['rep_group_id']) ? absint($_POST['rep_group_id']) : 0;
+
+        if (empty($rep_group_id) || get_post_type($rep_group_id) !== 'rep-group') {
+            wp_send_json_error(['message' => 'Invalid Rep Group ID.']);
+            return;
+        }
+        
+        // For display purposes, we might not have a single "clicked area" term name here.
+        // We can fetch all areas served by this rep group.
+        $area_terms = get_the_terms($rep_group_id, 'area-served');
+        $area_names_display = 'Multiple Areas'; // Default
+        if ($area_terms && !is_wp_error($area_terms)) {
+            $area_names = wp_list_pluck($area_terms, 'name');
+            if (count($area_names) === 1) {
+                 $area_names_display = $area_names[0];   
+            } elseif (count($area_names) > 1) {
+                 $area_names_display = implode(', ', array_slice($area_names, 0, 2)) . (count($area_names) > 2 ? '...' : '');
+            }
+        }
+
+
+        $rep_group_color = get_field('rep_group_map_color', $rep_group_id) ?: REP_GROUP_DEFAULT_REGION_COLOR;
+        $html = $this->render_rep_group_details_html($rep_group_id, $area_names_display, $rep_group_color);
+        wp_send_json_success(['html' => $html, 'term_name' => $area_names_display, 'color' => $rep_group_color]);
+    }
+
+
+    /**
+     * Helper function to render the HTML for a single Rep Group's details.
+     * Used by AJAX handlers.
+     *
+     * @param int    $post_id The Rep Group post ID.
+     * @param string $area_name_context The name of the area/context for the title.
+     * @param string $area_color The color associated with this area/rep group for styling.
+     * @return string HTML content.
+     */
+    private function render_rep_group_details_html($post_id, $area_name_context, $area_color) {
+        $output = '';
+        $title = get_the_title($post_id);
+        $logo_url = get_the_post_thumbnail_url($post_id, 'medium');
+
+        // Header with background color
+        $output .= sprintf(
+            '<div class="rep-group-details-header" style="background-color: %s;">',
+            esc_attr($area_color)
+        );
+        if ($logo_url) {
+            $output .= sprintf('<img src="%s" alt="%s logo" class="rep-group-logo-map">', esc_url($logo_url), esc_attr($title));
+        }
+        // Rep Group Title and Area Context - Using h3 for Rep Group title, p for context
+        $output .= sprintf(
+            '<h3 class="rep-group-title-map">%s</h3><p class="area-context-map">Areas Served: <span class="area-name-highlighted">%s</span></p>',
+            esc_html($title),
+            esc_html($area_name_context)
+        );
+        $output .= '</div>'; // End rep-group-details-header
+
+        $output .= '<div class="rep-group-details-body">';
+
+        // Address
+        $address_data = get_field('rg_address_container', $post_id);
+        if ($address_data && is_array($address_data)) {
+            $output .= '<div class="rep-group-contact-section address-details">';
+            $output .= '<h4><ion-icon name="location-outline"></ion-icon> Address</h4>';
+            $full_address = '';
+            if (!empty($address_data['rg_address_1'])) $full_address .= esc_html($address_data['rg_address_1']) . '<br>';
+            if (!empty($address_data['rg_address_2'])) $full_address .= esc_html($address_data['rg_address_2']) . '<br>';
+            $city_state_zip = [];
+            if (!empty($address_data['rg_city'])) $city_state_zip[] = esc_html($address_data['rg_city']);
+            if (!empty($address_data['rg_state'])) $city_state_zip[] = esc_html($address_data['rg_state']);
+            if (!empty($address_data['rg_zip_code'])) $city_state_zip[] = esc_html($address_data['rg_zip_code']);
+            if (!empty($city_state_zip)) $full_address .= implode(', ', $city_state_zip);
+            
+            if (!empty($full_address)) {
+                $output .= sprintf('<p>%s</p>', $full_address);
+            } else {
+                $output .= '<p>Address not available.</p>';
+            }
+            $output .= '</div>';
+        }
+        
+        // Phone Numbers (Repeater: rg_phone_numbers)
+        if (have_rows('rg_phone_numbers', $post_id)) {
+            $output .= '<div class="rep-group-contact-section phone-details">';
+            $output .= '<h4><ion-icon name="call-outline"></ion-icon> Phone Numbers</h4>';
+            while (have_rows('rg_phone_numbers', $post_id)) {
+                the_row();
+                $phone_type = get_sub_field('rep_phone_type');
+                $phone_number = get_sub_field('rep_phone_number');
+                if ($phone_number) {
+                    $output .= sprintf(
+                        '<p><strong>%s:</strong> <a href="tel:%s">%s</a></p>',
+                        esc_html($phone_type ?: 'Phone'),
+                        esc_attr(preg_replace('/[^0-9+]/', '', $phone_number)),
+                        esc_html($phone_number)
+                    );
+                }
+            }
+            $output .= '</div>';
+        }
+
+        // Email (Single field: rg_email)
+        $email = get_field('rg_email', $post_id);
+        if ($email && is_email($email)) {
+            $output .= '<div class="rep-group-contact-section email-details">';
+            $output .= '<h4><ion-icon name="mail-outline"></ion-icon> Email</h4>';
+            $output .= sprintf(
+                '<p><a href="mailto:%s">%s</a></p>',
+                esc_attr($email),
+                esc_html($email)
+            );
+            $output .= '</div>';
+        }
+
+        // Website (Single field: rg_website)
+        $website = get_field('rg_website', $post_id);
+        if ($website) {
+            $output .= '<div class="rep-group-contact-section website-details">';
+            $output .= '<h4><ion-icon name="globe-outline"></ion-icon> Website</h4>';
+            $output .= sprintf(
+                '<p><a href="%s" target="_blank" rel="noopener noreferrer">%s</a></p>',
+                esc_url($website),
+                esc_html($website) // Or a more friendly display like the domain name
+            );
+            $output .= '</div>';
+        }
+
+        // Rep Associates
+        if (have_rows('rep_associates', $post_id)) {
+            $output .= '<div class="rep-associates-map-display rep-group-contact-section">'; // Added rep-group-contact-section for consistent styling
+            $output .= '<h4><ion-icon name="people-outline"></ion-icon> Team</h4>';
+            while (have_rows('rep_associates', $post_id)) {
+                the_row();
+                $user_id = get_sub_field('rep_user');
+                $user_data = $user_id ? get_userdata($user_id) : null;
+                $output .= '<div class="associate-card">'; // Start associate card
+                
+                if ($user_data) {
+                    $output .= sprintf('<h5>%s</h5>', esc_html($user_data->display_name));
+                } else {
+                    $output .= '<h5>Associate</h5>';
+                }
+
+                // Associate Specific Areas Text
+                $associate_specific_areas = get_sub_field('associate_specific_areas_text');
+                if (!empty($associate_specific_areas)) {
+                    $output .= sprintf('<p class="associate-areas"><em>%s</em></p>', esc_html($associate_specific_areas));
+                }
+
+                // Contact Info for Associate
+                $email_override = get_sub_field('rep_contact_email_override');
+                $phone_override = get_sub_field('rep_contact_phone_override');
+                
+                $contact_info_html = $this->render_rep_contact_info($user_data, $email_override, $phone_override);
+                if (!empty(trim($contact_info_html))) {
+                     $output .= '<div class="associate-contact-map">' . $contact_info_html . '</div>';
+                }
+
+                $output .= '</div>'; // End associate card
+            }
+            $output .= '</div>'; // End rep-associates-map-display
+        }
+        $output .= '</div>'; // End rep-group-details-body
+
+        return $output;
+    }
+    
+    /**
+     * Generates HTML list of all rep groups for the default panel in map view.
+     * Includes data attributes for AJAX loading.
+     */
+    private function get_all_rep_groups_list_html($map_instance_id) {
+        $output = '<ul class="rep-group-list-map-default default-rep-group-list">'; // Added default-rep-group-list class
+        $rep_groups_query_args = [
+            'post_type' => 'rep-group',
+            'posts_per_page' => -1,
+            'post_status' => 'publish',
+            'orderby' => 'title',
+            'order' => 'ASC',
+        ];
+        $all_rep_groups = get_posts($rep_groups_query_args);
+
+        if (empty($all_rep_groups)) {
+            $output .= '<li>No rep groups found.</li>';
+        } else {
+            foreach ($all_rep_groups as $rep_group) {
+                $output .= sprintf(
+                    '<li data-rep-group-id="%d">', // Data attribute for JS
+                    esc_attr($rep_group->ID)
+                );
+                $output .= sprintf(
+                    '<a href="#" class="rep-group-list-item-link" data-map-instance-id="%s">',
+                    esc_attr($map_instance_id) 
+                );
+                $output .= esc_html(get_the_title($rep_group->ID));
+                $output .= '</a>';
+                $output .= '</li>';
+            }
+        }
+        $output .= '</ul>';
+        return $output;
+    }
+
+} // End Class

@@ -94,7 +94,10 @@ class Taxonomy_Manager {
 
     public function save_custom_fields($term_id) {
         if (isset($_POST['_rep_svg_target_id'])) {
-            update_term_meta($term_id, '_rep_svg_target_id', sanitize_text_field($_POST['_rep_svg_target_id']));
+            $svg_id_value = sanitize_text_field($_POST['_rep_svg_target_id']);
+            // Remove leading # before saving to keep data clean
+            $cleaned_svg_id = ltrim($svg_id_value, '#');
+            update_term_meta($term_id, '_rep_svg_target_id', $cleaned_svg_id);
         }
         if (isset($_POST['area_color'])) {
             update_term_meta($term_id, 'area_color', sanitize_hex_color($_POST['area_color']));

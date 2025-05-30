@@ -8,7 +8,7 @@
           return;
       }
 
-      const objectTag = mapContainer.find('object.rep-group-map-svg');
+      const objectTag = mapContainer.find('object.rep-group-map-svg-object');
       if (!objectTag.length) {
           return;
       }
@@ -26,15 +26,13 @@
   function applyFillToElementAndChildren(element, color) {
       // Apply to the element itself
       element.css('fill', color);
-      // If it's a group, try to apply to direct visual children that don't have their own explicit ID
-      // (as those might be separate clickable regions or have their own styling)
+      // If it's a group, try to apply to direct visual children
       if (element.is('g')) {
           element.children('path, rect, circle, polygon, ellipse').each(function() {
               const child = $(this);
-              // Only fill children if they aren't also mapped regions themselves
-              // or if you want the group color to override specific child styling from map_links.
-              // For now, let's assume group color should try to fill its direct, non-ID'd children.
-              if (!child.attr('id')) { // Simple check: if child has no ID, it's likely part of the parent group's visual
+              // Only fill children if they aren't also mapped regions themselves with a *different* ID.
+              // If child has same ID as parent group, or no ID, it should inherit the group's color.
+              if (!child.attr('id') || child.attr('id') === element.attr('id')) { 
                    child.css('fill', color);
               }
           });
@@ -44,37 +42,55 @@
   function processSvg(svgObjectElement, mapData) {
       try {
           const svgDoc = svgObjectElement.contentDocument;
-          if (!svgDoc) return;
-          const svgElements = $(svgDoc).find('path, g, rect, circle, polygon, ellipse');
+          if (!svgDoc) {
+              // console.error('RepMap: SVG contentDocument not found for', svgObjectElement);
+              return;
+          }
+          const svgRoot = $(svgDoc).find('svg');
+          if (!svgRoot.length) {
+              // console.error('RepMap: SVG root element not found in', svgObjectElement);
+              return;
+          }
           
-          svgElements.each(function() {
+          // console.log('RepMap: Processing SVG. Map Data for areas:', mapData.area_data);
+
+          // Iterate over all potential clickable elements, including groups
+          svgRoot.find('path, g, rect, circle, polygon, ellipse').each(function() {
               const el = $(this);
               const elId = el.attr('id');
-              if (elId && mapData.map_links && mapData.map_links[elId]) {
-                  const linkData = mapData.map_links[elId];
-                  const color = linkData.color || mapData.default_color;
-                  const termId = linkData.term_id;
-                  applyFillToElementAndChildren(el, color);
-                  el.addClass('mapped-region-frontend'); 
-                  if (termId) {
-                      el.css('cursor', 'pointer');
-                      el.on('click', function(e) {
-                          e.preventDefault();
-                          displayRepInfoForArea(termId, color, mapData.map_id, mapData.nonce, mapData.ajax_url);
-                      });
+
+              if (elId) {
+                  //// console.log('RepMap: Found SVG element with ID:', elId);
+                  if (mapData.area_data && mapData.area_data[elId]) {
+                      const areaInfo = mapData.area_data[elId];
+                      const color = areaInfo.color || mapData.default_region_color;
+                      // console.log('RepMap: MATCH! Applying color', color, 'to SVG ID:', elId, 'Data:', areaInfo);
+                      applyFillToElementAndChildren(el, color);
+                      el.addClass('mapped-region-frontend'); 
+                      if (mapData.is_interactive) {
+                          el.css('cursor', 'pointer');
+                          el.on('click', function(e) {
+                              e.preventDefault();
+                              e.stopPropagation(); // Prevent event from bubbling to parent SVG elements if nested
+                              // console.log('RepMap: Clicked on region:', elId, 'Color:', color);
+                              displayRepInfoForArea(elId, color, mapData.map_id, mapData.nonce, mapData.ajax_url);
+                          });
+                      }
+                       el.hover(
+                          function() { $(this).addClass('hover-region-frontend'); },
+                          function() { $(this).removeClass('hover-region-frontend'); }
+                      );
+                  } else {
+                      //// console.log('RepMap: SVG ID:', elId, 'NOT found in area_data.');
                   }
-                   el.hover(
-                      function() { $(this).addClass('hover-region-frontend'); },
-                      function() { $(this).removeClass('hover-region-frontend'); }
-                  );
               }
           });
       } catch (e) {
-          // Error processing frontend SVG for map
+          // console.error('RepMap: Error processing frontend SVG:', e);
       }
   }
   
-  function displayRepInfoForArea(termId, areaColor, mapInstanceId, nonce, ajaxUrl) {
+  function displayRepInfoForArea(areaSlug, areaColor, mapInstanceId, nonce, ajaxUrl) {
       const mapInteractiveArea = $('#' + mapInstanceId);
       const infoColumn = mapInteractiveArea.find('.rep-map-info-column');
       const defaultContent = infoColumn.find('.rep-map-default-content');
@@ -82,7 +98,7 @@
       const infoTarget = detailsContent.find('.rep-group-info-target');
 
       // Prepare for animation
-      infoTarget.html('<p><em>Loading details...</em></p>'); // Placeholder
+      infoTarget.html('<p><em>Loading rep group...</em></p>'); // Placeholder
 
       // If default is currently active, slide it out
       if (defaultContent.hasClass('panel-active')) {
@@ -100,11 +116,23 @@
       $.post(ajaxUrl, {
           action: 'get_rep_group_info_for_area',
           nonce: nonce,
-          term_id: termId,
-          area_color: areaColor
+          area_slug: areaSlug, // Send term slug
+          // area_color: areaColor // Not strictly needed by backend if backend determines color
       }).done(function(response) {
           if (response.success) {
               infoTarget.html(response.data.html);
+              // Optionally, re-apply color to the clicked SVG element if backend sends a definitive color
+              if (response.data.color && response.data.term_name) { // Ensure term_name (slug) is also part of response if needed to find element
+                  const svgObject = mapInteractiveArea.find('object.rep-group-map-svg');
+                  if (svgObject.length && svgObject[0].contentDocument) {
+                      const svgDoc = svgObject[0].contentDocument;
+                      // areaSlug is the ID of the clicked element
+                      const clickedElement = $(svgDoc).find('#' + areaSlug);
+                      if (clickedElement.length) {
+                          applyFillToElementAndChildren(clickedElement, response.data.color);
+                      }
+                  }
+              }
           } else {
               infoTarget.html('<p class="error-message">' + (response.data.message || 'Could not load rep details.') + '</p>');
           }
@@ -158,14 +186,11 @@
 
   // Initialize all maps on the page
   $(function() {
-      // Click handler for map regions (existing)
-      // Note: processSvg needs to be adjusted to pass mapInstanceId if it's not already doing so for displayRepInfoForArea.
-      // Assuming mapData in processSvg contains map_id (which is mapInstanceId) and other necessary data.
-
-      // Click handler for the "Back to Overview" link (existing)
+      // Click handler for the details panel close button (now "Back to Overview" link)
       $(document).on('click', '.rep-map-details-content .back-to-map-default', function(e) {
-          e.preventDefault(); // It's an <a> tag now
-          const infoColumn = $(this).closest('.rep-map-info-column');
+          e.preventDefault();
+          const mapInteractiveArea = $(this).closest('.rep-group-map-interactive-area');
+          const infoColumn = mapInteractiveArea.find('.rep-map-info-column');
           const defaultContent = infoColumn.find('.rep-map-default-content');
           const detailsContent = infoColumn.find('.rep-map-details-content');
           
@@ -174,10 +199,8 @@
               defaultContent.removeClass('panel-hidden').addClass('panel-active slide-in');
           }
           
-          // Scroll info column to top
           infoColumn.scrollTop(0);
 
-          // Clean up animation classes after animation duration
           setTimeout(function() {
               infoColumn.find('.slide-out').removeClass('slide-out').addClass('panel-hidden');
               infoColumn.find('.slide-in').removeClass('slide-in');

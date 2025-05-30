@@ -222,6 +222,25 @@
                     "append": ""
                 }
             ]
+        },
+        {
+            "key": "field_6838dd7df56e2",
+            "label": "Rep Group Map Color",
+            "name": "rep_group_map_color",
+            "aria-label": "",
+            "type": "color_picker",
+            "instructions": "",
+            "required": 0,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+            },
+            "default_value": "#CCCCCC",
+            "enable_opacity": 0,
+            "return_format": "string",
+            "allow_in_bindings": 0
         }
     ],
     "location": [
@@ -242,5 +261,5 @@
     "active": true,
     "description": "",
     "show_in_rest": 0,
-    "modified": 1748550208
+    "modified": 1748557199
 }
