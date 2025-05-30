@@ -486,31 +486,27 @@
     background-color: transparent; 
 }
 
-/* New style for the details container - modified for animation */
 .rep-map-details-content.has-left-border {
-    position: relative; /* Ensures that the ::before pseudo-element is positioned relative to this element */
-    border-left: 5px solid transparent; /* MODIFIED: Back to transparent */
-    /* padding-left: 15px; */ /* Adjust if content is too close, but it seems to have its own padding */
+    position: relative; 
+    border-left: 5px solid transparent; 
 }
 
-/* The animated border itself */
 .rep-map-details-content.has-left-border::before {
     content: "";
     position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
-    width: 5px; /* Matches the border-width of the parent */
-    background-color: var(--rep-group-color, #0073aa); /* Dynamic color from JS, falls back to a default blue */
-    transform: scaleY(0); /* Initially scaled down to be invisible */
-    transform-origin: top; /* MODIFIED: Animation proceeds from top to bottom */
-    transition: transform 0.3s ease-in-out; /* Smooth transition for the animation */
-    z-index: 1; /* Ensure this animated border is on top of the static one (if it were visible) */
+    width: 5px; 
+    background-color: var(--rep-group-color, #0073aa); 
+    transform: scaleY(0); 
+    transform-origin: top; 
+    transition: transform 0.3s ease-in-out; 
+    z-index: 1; 
 }
 
-/* When the 'animate-border-in' class is added, scale the ::before pseudo-element to full height */
 .rep-map-details-content.has-left-border.animate-border-in::before {
-    transform: scaleY(1); /* Animate to full height */
+    transform: scaleY(1); 
 }
 
 .rep-map-details-content .back-to-map-default {
@@ -585,22 +581,37 @@
     font-family: var(--font-family-primary); 
 }
 
-.rep-group-contact-item {
+.contact-item {
     display: flex;
     align-items: flex-start; 
     margin-bottom: 10px;
     font-size: 0.95em;
 }
 
-.rep-group-contact-item ion-icon {
+.contact-item ion-icon {
     font-size: 1.3em; 
     margin-right: 10px;
     flex-shrink: 0; 
 }
 
+.contact-item a {
+    color: #333;
+    text-decoration: none;
+    word-break: break-word;
+    line-height: 1.5; 
+}
+
+.contact-item a:hover {
+    text-decoration: underline;
+}
+
+.rep-group-contact-item .contact-text {
+    line-height: 1.5;
+}
+
 .rep-group-contact-item .contact-text-hidden,
 .rep-associate-contact-item .contact-text-hidden,
-.rep-group-contact-item .contact-text.visually-hidden {
+.contact-item .contact-text.visually-hidden {
     border: 0;
     clip: rect(0 0 0 0);
     height: 1px;
@@ -612,29 +623,26 @@
     white-space: nowrap; 
 }
 
-.rep-group-contact-item a,
-.rep-associate-contact-item a {
-    color: #333;
-    text-decoration: none;
-    word-break: break-word;
-}
-
-.rep-group-contact-item a:hover,
-.rep-associate-contact-item a:hover {
-    text-decoration: underline;
-}
-
-.rep-group-contact-item a,
-.rep-group-contact-item .contact-text {
-    line-height: 1.5;
-}
-
 .address-details .contact-text {
     display: block; 
     line-height: 1.5;
     color: #333; 
     margin-right: 8px;
     flex-shrink: 0;
+}
+
+/* Area Served Styling */
+.area-served-info {
+    margin-bottom: 8px; 
+}
+
+.area-label {
+    font-weight: bold; 
+    display: block; 
+}
+
+.area-values {
+    display: block; 
 }
 
 .team-divider {
@@ -664,44 +672,6 @@
     font-size: 1.2em; 
     font-weight: bold;
     margin: 0 0 5px 0;
-}
-
-.rep-associate-areas-served {
-    font-size: 1em;
-    color: #555;
-    margin-bottom: 8px;
-}
-
-.rep-associate-areas-served .area-served-label {
-    display: block; 
-    font-weight: normal; 
-}
-
-.rep-associate-areas-served .area-served-values {
-    display: block; 
-}
-
-.rep-associate-contact-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 5px;
-    font-size: 1em;
-}
-
-.rep-associate-contact-item ion-icon {
-    font-size: 1.3em; 
-    margin-right: 8px;
-    flex-shrink: 0;
-}
-
-.rep-associate-contact-item a {
-    color: #333;
-    text-decoration: none;
-    word-break: break-word;
-}
-
-.rep-associate-contact-item a:hover {
-    text-decoration: underline;
 }
 
 ion-icon {

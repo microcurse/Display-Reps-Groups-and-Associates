@@ -44,8 +44,10 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
     $is_generic_context = in_array($area_name_context, ['Details for this Rep Group', 'Not specified', 'Error fetching areas'], true);
     if (!empty($area_name_context) && !$is_generic_context) : 
     ?>
-        <span class="area-served-header"><strong>Area Served:</strong></span>
-        <span class="area-served-values"><?php echo esc_html($area_name_context); ?></span>
+        <div class="area-served-info">
+            <span class="area-label">Area Served:</span>
+            <span class="area-values"><?php echo esc_html($area_name_context); ?></span>
+        </div>
     <?php endif; ?>
     <?php if ($logo_url) : ?>
         <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($title); ?> logo" class="rep-group-logo-map">
@@ -56,7 +58,7 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
 <div class="rep-group-details-body">
     <?php // Website Section - shows URL as text, which is fine. ?>
     <?php if ($website) : ?>
-        <div class="rep-group-contact-item website-details">
+        <div class="contact-item rep-group-contact-item website-details">
             <ion-icon name="globe" aria-hidden="true"></ion-icon>
             <a href="<?php echo esc_url($website); ?>" target="_blank" rel="noopener noreferrer" aria-label="Website: <?php echo esc_attr(str_replace(['http://', 'https://'], '', $website)); ?>">
                 <?php echo esc_html(str_replace(['http://', 'https://'], '', $website)); // Display without http(s):// ?>
@@ -66,7 +68,7 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
 
     <?php // Address Section ?>
     <?php if ($address_data && (!empty($address_data['rg_address_1']) || !empty($address_data['rg_city']))) : ?>
-        <div class="rep-group-contact-item address-details">
+        <div class="contact-item rep-group-contact-item address-details">
             <ion-icon name="location" aria-label="Address"></ion-icon>
             <span class="contact-text">
                 <?php 
@@ -95,7 +97,7 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
                     $icon_name = 'print';
                 }
         ?>
-            <div class="rep-group-contact-item phone-details">
+            <div class="contact-item rep-group-contact-item phone-details">
                 <ion-icon name="<?php echo $icon_name; ?>" aria-hidden="true"></ion-icon>
                 <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $phone_number)); ?>" 
                    aria-label="<?php echo $phone_type . ': ' . $phone_number; ?>">
@@ -106,7 +108,7 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
             endif;
         endforeach; ?>
     <?php elseif ($phone) : // Fallback for old single phone field, can be removed later if data is migrated ?>
-        <div class="rep-group-contact-item phone-details">
+        <div class="contact-item rep-group-contact-item phone-details">
             <ion-icon name="call" aria-hidden="true"></ion-icon>
             <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $phone)); ?>" 
                aria-label="Phone: <?php echo esc_attr($phone); ?>">
@@ -117,7 +119,7 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
 
     <?php // Email Section ?>
     <?php if ($email) : ?>
-        <div class="rep-group-contact-item email-details">
+        <div class="contact-item rep-group-contact-item email-details">
             <ion-icon name="mail" aria-hidden="true"></ion-icon>
             <a href="mailto:<?php echo esc_attr($email); ?>" aria-label="Email: <?php echo esc_attr($email); ?>">
                 <span class="contact-text-hidden">Email: </span><?php echo esc_html($email); ?>
@@ -160,13 +162,13 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
                 <div class="rep-associate-item">
                     <h5 class="rep-associate-name"><?php echo $associate_name; ?></h5>
                     <?php if (!empty($associate_areas_served)) : ?>
-                        <div class="rep-associate-areas-served">
-                            <span class="area-served-label"><strong>Area Served:</strong></span>
-                            <span class="area-served-values"><?php echo $associate_areas_served; ?></span>
+                        <div class="area-served-info rep-associate-areas-served">
+                            <span class="area-label">Area Served:</span>
+                            <span class="area-values"><?php echo $associate_areas_served; ?></span>
                         </div>
                     <?php endif; ?>
                     <?php if ($associate_phone) : ?>
-                        <div class="rep-associate-contact-item phone-details">
+                        <div class="contact-item rep-associate-contact-item phone-details">
                             <ion-icon name="call" aria-hidden="true"></ion-icon>
                             <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $associate_phone)); ?>" 
                                aria-label="Call <?php echo $associate_name; ?> at <?php echo $associate_phone; ?>">
@@ -175,7 +177,7 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
                         </div>
                     <?php endif; ?>
                     <?php if ($associate_email) : ?>
-                        <div class="rep-associate-contact-item email-details">
+                        <div class="contact-item rep-associate-contact-item email-details">
                             <ion-icon name="mail" aria-hidden="true"></ion-icon>
                             <a href="mailto:<?php echo esc_attr($associate_email); ?>" 
                                aria-label="Email <?php echo $associate_name; ?> at <?php echo esc_attr($associate_email); ?>">
