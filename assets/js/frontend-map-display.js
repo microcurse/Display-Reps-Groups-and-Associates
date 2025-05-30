@@ -5,26 +5,19 @@
   function initRepMap(mapData) {
       const mapContainer = $('#' + mapData.map_id);
       if (!mapContainer.length) {
+          console.log('RepMap: Map container not found:', mapData.map_id);
           return;
       }
 
-      const objectTag = mapContainer.find('object.rep-group-map-svg-object');
-      if (!objectTag.length) {
+      const svgElement = mapContainer.find('svg.rep-group-map-svg-object'); 
+      if (!svgElement.length) {
+          console.log('RepMap: Inline SVG element (.rep-group-map-svg-object) not found in:', mapData.map_id);
           return;
       }
 
-      const handleLoad = function() {
-        processSvg(this, mapData); // 'this' is the objectTag element
-        if (mapData.is_interactive) {
-            initPanZoomForMap(mapData.map_id, this, mapData);
-        }
-      };
-
-      if (objectTag[0].contentDocument && objectTag[0].contentDocument.readyState === 'complete') {
-        // Call handleLoad with objectTag[0] as context for 'this'
-        handleLoad.call(objectTag[0]); 
-      } else {
-          objectTag.on('load', handleLoad);
+      processSvg(svgElement, mapData);
+      if (mapData.is_interactive) {
+          initPanZoomForMap(mapData.map_id, svgElement, mapData);
       }
   }
 
@@ -46,38 +39,44 @@
 
   function processSvg(svgObjectElement, mapData) {
       try {
-          const svgDoc = svgObjectElement.contentDocument;
-          if (!svgDoc) {
-              // console.error('RepMap: SVG contentDocument not found for', svgObjectElement);
+          const svgRoot = svgObjectElement;
+
+          if (!svgRoot.length) {
+              console.error('RepMap: SVG root element not found (this should be the passed element).', svgObjectElement[0]);
               return;
           }
-          const svgRoot = $(svgDoc).find('svg');
-          if (!svgRoot.length) {
-              // console.error('RepMap: SVG root element not found in', svgObjectElement);
-              return;
+
+          let panZoomGroup = svgRoot.find('> g.rep-map-pan-zoom-group');
+          if (!panZoomGroup.length) {
+              const newG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+              panZoomGroup = $(newG).addClass('rep-map-pan-zoom-group');
+              svgRoot.children().appendTo(panZoomGroup);
+              svgRoot.append(panZoomGroup);
           }
           
-          // console.log('RepMap: Processing SVG. Map Data for areas:', mapData.area_data);
+          let foundElementsCount = 0;
+          let processedRegionsCount = 0;
+          let firstProcessedId = null;
 
-          // Iterate over all potential clickable elements, including groups
-          svgRoot.find('path, g, rect, circle, polygon, ellipse').each(function() {
+          svgRoot.find('path, g, rect, circle, polygon, ellipse').each(function(index) {
+              foundElementsCount++;
               const el = $(this);
               const elId = el.attr('id');
 
               if (elId) {
-                  //// console.log('RepMap: Found SVG element with ID:', elId);
                   if (mapData.area_data && mapData.area_data[elId]) {
+                      processedRegionsCount++;
+                      if (!firstProcessedId) firstProcessedId = elId;
+
                       const areaInfo = mapData.area_data[elId];
                       const color = areaInfo.color || mapData.default_region_color;
-                      // console.log('RepMap: MATCH! Applying color', color, 'to SVG ID:', elId, 'Data:', areaInfo);
                       applyFillToElementAndChildren(el, color);
                       el.addClass('mapped-region-frontend'); 
                       if (mapData.is_interactive) {
                           el.css('cursor', 'pointer');
                           el.on('click', function(e) {
                               e.preventDefault();
-                              e.stopPropagation(); // Prevent event from bubbling to parent SVG elements if nested
-                              // console.log('RepMap: Clicked on region:', elId, 'Color:', color);
+                              e.stopPropagation();
                               displayRepInfoForArea(elId, color, mapData.map_id, mapData.nonce, mapData.ajax_url, mapData.default_region_color);
                           });
                       }
@@ -85,13 +84,11 @@
                           function() { $(this).addClass('hover-region-frontend'); },
                           function() { $(this).removeClass('hover-region-frontend'); }
                       );
-                  } else {
-                      //// console.log('RepMap: SVG ID:', elId, 'NOT found in area_data.');
                   }
               }
           });
       } catch (e) {
-          // console.error('RepMap: Error processing frontend SVG:', e);
+          console.error('RepMap: Error processing frontend SVG:', e);
       }
   }
   
@@ -135,7 +132,7 @@
 
               // Re-apply fill to SVG if backend determined a specific color for the region
               if (response.data.color && response.data.term_name) { 
-                  const svgObject = mapInteractiveArea.find('object.rep-group-map-svg-object');
+                  const svgObject = mapInteractiveArea.find('svg.rep-group-map-svg-object');
                   if (svgObject.length && svgObject[0].contentDocument) {
                       const svgDoc = svgObject[0].contentDocument;
                       const clickedElement = $(svgDoc).find('#' + areaSlug);
@@ -269,15 +266,18 @@
   const mapStates = {}; // Store state per mapInstanceId
 
   function applyTransform(state) {
-      if (state && state.svgObject && state.svgObject.length) {
-          console.log('Applying transform:', `translate(${state.panX}px, ${state.panY}px) scale(${state.scale})`, state.svgObject);
+      if (state && state.panZoomGroup && state.panZoomGroup.length) {
+          const transformString = `translate(${state.panX} ${state.panY}) scale(${state.scale})`;
+          state.panZoomGroup.attr('transform', transformString);
+      } else if (state && state.svgObject && state.svgObject.length) {
+          console.warn('Applying CSS transform to svgObject as panZoomGroup not found. State:', state);
           state.svgObject.css('transform', `translate(${state.panX}px, ${state.panY}px) scale(${state.scale})`);
       }
   }
 
   function handlePanMouseDown(event, state, mapInstanceId) {
-      console.log('PanMouseDown on map:', mapInstanceId, 'Target:', event.target, 'State:', state);
-      event.preventDefault(); // Re-enable to prevent default browser drag on SVG content
+      event.preventDefault(); 
+      
       state.isPanning = true;
       state.isDragging = false; 
       state.startX = event.clientX;
@@ -285,11 +285,20 @@
       state.lastMouseX = event.clientX;
       state.lastMouseY = event.clientY;
       if (state.viewport) state.viewport.css('cursor', 'grabbing');
+
+      // Attach mousemove and mouseup to the viewport itself
+      state.viewport.on('mousemove.panzoom.' + mapInstanceId, function(e_move) {
+          handlePanMouseMove(e_move.originalEvent, state, mapInstanceId);
+      });
+      state.viewport.on('mouseup.panzoom.' + mapInstanceId + ', mouseleave.panzoom.' + mapInstanceId, function(e_up) {
+          // mouseleave is added to handle cases where mouse is released outside viewport
+          handlePanMouseUp(e_up.originalEvent, state, mapInstanceId);
+          state.viewport.off('.panzoom.' + mapInstanceId);
+      });
   }
 
   function handlePanMouseMove(event, state, mapInstanceId) {
       if (!state.isPanning) return;
-      // console.log('PanMouseMove on map:', mapInstanceId); // Can be noisy
 
       const dx = event.clientX - state.lastMouseX;
       const dy = event.clientY - state.lastMouseY;
@@ -298,11 +307,10 @@
           const moveX = Math.abs(event.clientX - state.startX);
           const moveY = Math.abs(event.clientY - state.startY);
           if (moveX > state.dragThreshold || moveY > state.dragThreshold) {
-              console.log('Drag threshold exceeded, starting drag for map:', mapInstanceId);
               state.isDragging = true;
-              // If we decide to prevent path clicks only after drag starts, this might be a place
-              // to temporarily set pointer-events: none on the svgObject if needed for reliability
-              // though stopping propagation on mouseup is preferred.
+              if (state.svgRoot && state.svgRoot.length) {
+                  state.svgRoot.css('pointer-events', 'none');
+              }
           }
       }
 
@@ -317,23 +325,33 @@
   }
 
   function handlePanMouseUp(event, state, mapInstanceId) {
-      console.log('PanMouseUp on map:', mapInstanceId, 'isDragging:', state.isDragging);
+      if (state.viewport) {
+          state.viewport.off('.panzoom.' + mapInstanceId);
+      }
+
+      // Restore pointer events on the root SVG element
+      if (state.svgRoot && state.svgRoot.length) {
+          state.svgRoot.css('pointer-events', 'auto');
+      }
+
+      const wasDragging = state.isDragging; // Capture before reset
+
       state.isPanning = false;
+      // Reset dragging flag AFTER checking it, so click prevention logic works
+      state.isDragging = false; 
+
       if (state.viewport) state.viewport.css('cursor', 'grab');
 
-      if (state.isDragging) {
-          console.log('Drag ended, preventing click for map:', mapInstanceId);
-          event.preventDefault(); // Prevent default actions if it was a drag
-          event.stopImmediatePropagation(); // Crucial: stop click on underlying SVG path
+      if (wasDragging) {
+          event.preventDefault(); 
+          event.stopImmediatePropagation(); 
       }
       // If it wasn't a drag, the click on the SVG path (if any) should proceed normally.
-      state.isDragging = false; // Reset for next interaction
   }
   
   function handleWheelZoom(event, state, mapInstanceId) {
-      console.log('WheelZoom on map:', mapInstanceId, 'DeltaY:', event.deltaY);
-      event.preventDefault(); // Always prevent default for wheel to stop page scroll
-      event.stopImmediatePropagation(); // Also stop propagation to prevent path clicks during zoom
+      event.preventDefault();
+      event.stopImmediatePropagation();
 
       const oldScale = state.scale;
       const rect = state.viewport[0].getBoundingClientRect();
@@ -359,14 +377,24 @@
       applyTransform(state);
   }
 
-  function initPanZoomForMap(mapInstanceId, svgObjectElement, mapData) {
-      console.log('initPanZoomForMap called for:', mapInstanceId, 'SVG Element:', svgObjectElement);
-      const viewport = $(svgObjectElement).parent('.svg-viewport');
-      console.log('Viewport found:', viewport);
+  function initPanZoomForMap(mapInstanceId, svgElement, mapData) {
+      const viewport = $(svgElement).parent('.svg-viewport');
 
       if (!viewport.length) {
           console.error('SVG viewport not found for map:', mapInstanceId);
           return;
+      }
+
+      const svgRootElement = svgElement; 
+      let panZoomGroupElement = null;
+
+      if (svgRootElement && svgRootElement.length) {
+          panZoomGroupElement = svgRootElement.find('> g.rep-map-pan-zoom-group');
+          if (!panZoomGroupElement.length) {
+              console.error('RepMap: panZoomGroup not found inside SVG for map by initPanZoomForMap:', mapInstanceId);
+          }
+      } else {
+          console.error('RepMap: svgRootElement (the inline <svg>) not found for map by initPanZoomForMap:', mapInstanceId);
       }
 
       mapStates[mapInstanceId] = {
@@ -380,7 +408,8 @@
           startY: 0,              
           lastMouseX: 0,
           lastMouseY: 0,
-          svgObject: $(svgObjectElement),
+          svgRoot: svgRootElement,       // The inline <svg> element (jQuery object)
+          panZoomGroup: panZoomGroupElement, // The <g> inside the SVG
           viewport: viewport,
           minScale: 0.5, 
           maxScale: 5,   
@@ -390,25 +419,12 @@
       const state = mapStates[mapInstanceId];
       applyTransform(state); 
 
-      viewport.on('mousedown', function(event) { // This is jQuery event object
-          console.log('Viewport mousedown event. Target:', event.target, ' map:', mapInstanceId);
-          handlePanMouseDown(event.originalEvent, state, mapInstanceId); // Pass native event
+      viewport.on('mousedown', function(event) {
+          handlePanMouseDown(event.originalEvent, state, mapInstanceId);
       });
 
-      $(document).on('mousemove.panzoom.' + mapInstanceId, function(event) { // jQuery event object
-          if (state.isPanning) {
-              handlePanMouseMove(event.originalEvent, state, mapInstanceId); // Pass native event
-          }
-      });
-
-      $(document).on('mouseup.panzoom.' + mapInstanceId, function(event) { // jQuery event object
-          if (state.isPanning) {
-              handlePanMouseUp(event.originalEvent, state, mapInstanceId); // Pass native event
-          }
-      });
-      
-      viewport.on('wheel', function(event) { // jQuery event object
-          handleWheelZoom(event.originalEvent, state, mapInstanceId); // Pass native event
+      viewport.on('wheel', function(event) {
+          handleWheelZoom(event.originalEvent, state, mapInstanceId);
       });
   }
   // --- End of New Pan and Zoom Functionality ---

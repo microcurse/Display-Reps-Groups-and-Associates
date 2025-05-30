@@ -31,8 +31,57 @@ if (empty($map_instance_id) || empty($map_type) || empty($svg_url) || !isset($de
     </div>
 
     <div class="rep-map-svg-column">
-        <div class="svg-viewport"> 
-            <object id="rep-map-svg-<?php echo esc_attr($map_type); ?>" class="rep-group-map-svg-object" type="image/svg+xml" data="<?php echo esc_url($svg_url); ?>" aria-label="<?php echo esc_attr(ucfirst($map_type)); ?> map"></object>
+        <div class="svg-viewport">
+            <?php
+            // Fetch and display SVG content inline
+            if (!empty($svg_url)) {
+                $svg_path = str_replace(content_url(), WP_CONTENT_DIR, $svg_url);
+
+                $svg_content = false; // Initialize
+
+                if (filter_var($svg_url, FILTER_VALIDATE_URL) && strpos($svg_path, WP_CONTENT_DIR) !== 0) {
+                    if (ini_get('allow_url_fopen')) {
+                        $svg_content = @file_get_contents($svg_url);
+                    } else {
+                        // error_log('[RepMap Template] Cannot fetch remote SVG: allow_url_fopen is disabled.');
+                    }
+                } elseif (file_exists($svg_path)) {
+                    $svg_content = @file_get_contents($svg_path);
+                } else {
+                    $svg_content = false;
+                }
+
+                if ($svg_content) {
+                    $original_trimmed_content = trim($svg_content);
+                    
+                    $content_to_check = $original_trimmed_content;
+                    $content_to_check = preg_replace('/^<\\?xml[^>]*\\?>\\s*/is', '', $content_to_check);
+                    $content_to_check = preg_replace('/^<!--.*?-->\\s*/is', '', $content_to_check);
+                    $content_to_check = preg_replace('/^<!--.*?-->\\s*/is', '', $content_to_check);
+
+                    if (stripos($content_to_check, '<svg') === 0) {
+                        $svg_id = 'rep-map-svg-' . esc_attr($map_type);
+                        $svg_class = 'rep-group-map-svg-object';
+                        
+                        $modified_svg_content = preg_replace(
+                            '/<svg/', 
+                            sprintf('<svg id="%s" class="%s"', esc_attr($svg_id), esc_attr($svg_class)), 
+                            $svg_content,
+                            1 
+                        );
+                        // error_log('[RepMap Template] SVG content (original with prefixes) modified with ID/class and will be echoed.');
+                        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                        echo $modified_svg_content;
+                    } else {
+                        echo '<!-- Rep Map: Loaded content is not a valid SVG or has unexpected prefixes. URL: ' . esc_html($svg_url) . ' -->';
+                    }
+                } else {
+                    echo '<!-- Rep Map: Unable to load SVG from URL: ' . esc_html($svg_url) . ' -->';
+                }
+            } else {
+                echo '<!-- Rep Map: SVG URL not provided. -->';
+            }
+            ?>
         </div>
     </div>
 </div> 
