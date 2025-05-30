@@ -3,6 +3,24 @@
     "title": "Rep Group",
     "fields": [
         {
+            "key": "field_6839e2c431d49",
+            "label": "Website",
+            "name": "rg_website",
+            "aria-label": "",
+            "type": "url",
+            "instructions": "",
+            "required": 0,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+            },
+            "default_value": "",
+            "allow_in_bindings": 0,
+            "placeholder": ""
+        },
+        {
             "key": "field_6765c143ee847",
             "label": "Phone Number(s)",
             "name": "rg_phone_numbers",
@@ -254,12 +272,12 @@
     ],
     "menu_order": 0,
     "position": "normal",
-    "style": "default",
+    "style": "seamless",
     "label_placement": "top",
     "instruction_placement": "label",
     "hide_on_screen": "",
     "active": true,
     "description": "",
     "show_in_rest": 0,
-    "modified": 1748557199
+    "modified": 1748624158
 }

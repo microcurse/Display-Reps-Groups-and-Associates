@@ -20,8 +20,8 @@
             "pagination": 0,
             "min": 0,
             "max": 0,
-            "collapsed": "",
-            "button_label": "Add Row",
+            "collapsed": "field_6838a74d701e5",
+            "button_label": "Add Associate",
             "rows_per_page": 20,
             "sub_fields": [
                 {
@@ -137,5 +137,5 @@
     "active": true,
     "description": "",
     "show_in_rest": 0,
-    "modified": 1748557862
+    "modified": 1748624357
 }
