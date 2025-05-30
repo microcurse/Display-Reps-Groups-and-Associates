@@ -321,7 +321,7 @@
 
 .rep-map-info-column {
     flex: 0 0 320px;
-    order: 1;
+    order: 2;
     background-color: var(--bg-color-main-content, var(--bg-color));
     position: relative; 
     overflow: hidden;
@@ -335,7 +335,7 @@
 
 .rep-map-svg-column {
     flex: 1 1 auto;
-    order: 2;
+    order: 1;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -380,7 +380,6 @@
 .rep-map-default-content,
 .rep-map-details-content {
     padding: 15px;
-    padding-left: 20px; 
     box-sizing: border-box;
     width: 100%;
     flex-grow: 1;
@@ -554,12 +553,13 @@
 }
 
 .rep-group-title-map {
-    font-size: 1.6em; 
+    font-size: 1.6em;
     font-weight: bold;
-    margin-bottom: 10px; 
-    padding-bottom: 5px; 
-    color: var(--text-color); 
-    font-family: var(--font-family-primary); 
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    padding-top: 16px;
+    color: var(--text-color);
+    font-family: var(--font-family-primary);
 }
 
 .contact-item {

@@ -417,55 +417,52 @@
       };
 
       const state = mapStates[mapInstanceId];
+      const mapId = mapInstanceId; // Alias for clarity in the rAF callback
+      const panZoomGroup = state.panZoomGroup; // Alias for clarity
 
       // Defer the dimension calculation and initial transform to the next animation frame
       requestAnimationFrame(() => {
           const viewportWidth = state.viewport.width();
           const viewportHeight = state.viewport.height();
+          // Removed console.log for Viewport dimensions
 
-          if (state.svgRoot && state.svgRoot.length && typeof state.svgRoot[0].getBBox === 'function') {
-              const svgBoundingBox = state.svgRoot[0].getBBox();
-              let svgWidth = svgBoundingBox.width;
-              let svgHeight = svgBoundingBox.height;
-
-              console.log(`RepMap (rAF): Viewport dimensions for ${mapInstanceId}: ${viewportWidth}x${viewportHeight}`);
-              console.log(`RepMap (rAF): SVG original dimensions for ${mapInstanceId}: ${svgWidth}x${svgHeight}`);
-
-              if (svgWidth > 0 && svgHeight > 0) {
-                  const viewportAspect = viewportWidth / viewportHeight;
-                  const svgAspect = svgWidth / svgHeight;
-                  let calculatedScale;
-
-                  if (viewportAspect < svgAspect) { // Viewport is "taller" or less wide than SVG
-                      calculatedScale = viewportHeight / svgHeight;
-                      console.log(`RepMap (rAF): Initial scale for ${mapInstanceId}: fitting to height. Scale: ${calculatedScale}`);
-                  } else { // Viewport is "wider" or less tall
-                      calculatedScale = viewportWidth / svgWidth;
-                      console.log(`RepMap (rAF): Initial scale for ${mapInstanceId}: fitting to width. Scale: ${calculatedScale}`);
-                  }
-
-                  if (calculatedScale > 0 && isFinite(calculatedScale)) {
-                      state.scale = calculatedScale;
-                      state.scale = Math.max(state.minScale, Math.min(state.maxScale, state.scale)); // Clamp scale
-                  } else {
-                      console.warn(`RepMap (rAF): Calculated scale ${calculatedScale} is invalid for ${mapInstanceId}. Using default state.scale: ${state.scale}`);
-                      // state.scale remains its default (1)
-                  }
-
-                  state.panX = (viewportWidth - svgWidth * state.scale) / 2;
-                  state.panY = (viewportHeight - svgHeight * state.scale) / 2;
-
-              } else {
-                  console.warn(`RepMap (rAF): SVG dimensions are zero or invalid for ${mapInstanceId} (w:${svgWidth}, h:${svgHeight}). Using default scale and pan.`);
-                  // state.scale, state.panX, state.panY remain their defaults
-              }
-          } else {
-              console.warn(`RepMap (rAF): svgRoot not available or getBBox not supported for ${mapInstanceId}. Using default scale and pan.`);
-              // state.scale, state.panX, state.panY remain their defaults
+          if (!svgElement || !svgElement.length || typeof svgElement[0].getBBox !== 'function') {
+              console.warn(`RepMap (rAF): svgElement is not a valid SVG element or getBBox is not available for ${mapId}.`);
+              return; // Exit if we can't get dimensions
           }
+          const svgBox = svgElement[0].getBBox();
+          // Removed console.log for SVG original dimensions
 
-          console.log(`RepMap (rAF): Applying initial transform for ${mapInstanceId}:`, JSON.parse(JSON.stringify(state)));
-          applyTransform(state);
+          if (svgBox.width === 0 || svgBox.height === 0) {
+              console.warn(`RepMap: SVG for ${mapId} has zero dimensions, skipping initial auto-zoom.`);
+          } else {
+              const viewportAspect = viewportWidth / viewportHeight;
+              const svgAspect = svgBox.width / svgBox.height;
+              let scale, panX = 0, panY = 0;
+
+              if (viewportAspect > svgAspect) { // Viewport is wider than SVG, fit to height
+                  scale = viewportHeight / svgBox.height;
+                  panX = (viewportWidth - svgBox.width * scale) / 2;
+                  // Removed console.log for fitting to height
+              } else { // Viewport is taller than SVG (or same aspect), fit to width
+                  scale = viewportWidth / svgBox.width;
+                  panY = (viewportHeight - svgBox.height * scale) / 2;
+                  // Removed console.log for fitting to width
+              }
+
+              // Ensure scale is not excessively large or small, adjust as needed
+              scale = Math.max(state.minScale, Math.min(state.maxScale, scale));
+
+              mapStates[mapId].currentScale = scale;
+              mapStates[mapId].currentPan = { x: panX, y: panY };
+
+              // Removed console.log for Applying initial transform
+              if (panZoomGroup && panZoomGroup.length) {
+                  panZoomGroup.css('transform', `translate(${panX}px, ${panY}px) scale(${scale})`);
+              } else {
+                  console.warn(`RepMap (rAF): panZoomGroup not found for ${mapId} when trying to apply initial transform.`);
+              }
+          }
       });
 
       viewport.on('mousedown', function(event) {
