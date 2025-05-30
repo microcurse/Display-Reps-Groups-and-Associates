@@ -31,6 +31,8 @@ if (empty($map_instance_id) || empty($map_type) || empty($svg_url) || !isset($de
     </div>
 
     <div class="rep-map-svg-column">
-        <object id="rep-map-svg-<?php echo esc_attr($map_type); ?>" class="rep-group-map-svg-object" type="image/svg+xml" data="<?php echo esc_url($svg_url); ?>" aria-label="<?php echo esc_attr(ucfirst($map_type)); ?> map"></object>
+        <div class="svg-viewport"> 
+            <object id="rep-map-svg-<?php echo esc_attr($map_type); ?>" class="rep-group-map-svg-object" type="image/svg+xml" data="<?php echo esc_url($svg_url); ?>" aria-label="<?php echo esc_attr(ucfirst($map_type)); ?> map"></object>
+        </div>
     </div>
 </div> 

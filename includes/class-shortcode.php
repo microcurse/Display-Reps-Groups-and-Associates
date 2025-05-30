@@ -295,37 +295,53 @@ class Shortcode {
     }
     
     /**
-     * AJAX handler to get rep group details by ID (for list item clicks).
+     * AJAX handler to get rep group details when a list item is clicked.
+     * Expects 'rep_group_id'.
      */
     public function ajax_get_rep_group_details_by_id() {
         check_ajax_referer('rep_map_nonce', 'nonce');
 
-        $rep_group_id = isset($_POST['rep_group_id']) ? absint($_POST['rep_group_id']) : 0;
+        $rep_group_id = isset($_POST['rep_group_id']) ? intval($_POST['rep_group_id']) : 0;
 
-        if (empty($rep_group_id) || get_post_type($rep_group_id) !== 'rep-group') {
+        if (empty($rep_group_id)) {
+            wp_send_json_error(['message' => 'Rep Group ID not provided.']);
+            return;
+        }
+
+        // Check if the post exists and is a 'rep-group'
+        $post = get_post($rep_group_id);
+        if (!$post || $post->post_type !== 'rep-group') {
             wp_send_json_error(['message' => 'Invalid Rep Group ID.']);
             return;
         }
-        
-        // For display purposes, we might not have a single "clicked area" term name here.
-        // We can fetch all areas served by this rep group.
-        $area_terms = get_the_terms($rep_group_id, 'area-served');
-        $area_names_display = 'Multiple Areas'; // Default
-        if ($area_terms && !is_wp_error($area_terms)) {
-            $area_names = wp_list_pluck($area_terms, 'name');
-            if (count($area_names) === 1) {
-                 $area_names_display = $area_names[0];   
-            } elseif (count($area_names) > 1) {
-                 $area_names_display = implode(', ', array_slice($area_names, 0, 2)) . (count($area_names) > 2 ? '...' : '');
-            }
+
+        // Fetch the color for the rep group
+        $rep_group_color = get_field('rep_group_map_color', $rep_group_id);
+        if (empty($rep_group_color)) {
+            $rep_group_color = defined('REP_GROUP_DEFAULT_REGION_COLOR') ? REP_GROUP_DEFAULT_REGION_COLOR : '#CCCCCC';
         }
 
+        // Since this is a direct rep group lookup, area_name_context can be more general
+        // or derived from the terms associated with this rep group if needed.
+        // For simplicity, we might not need a specific area_name_context here, 
+        // or we can list all areas served by this rep group.
+        $area_name_context = 'Details for this Rep Group'; // Placeholder context
 
-        $rep_group_color = get_field('rep_group_map_color', $rep_group_id) ?: REP_GROUP_DEFAULT_REGION_COLOR;
-        $html = $this->render_rep_group_details_html($rep_group_id, $area_names_display, $rep_group_color);
-        wp_send_json_success(['html' => $html, 'term_name' => $area_names_display, 'color' => $rep_group_color]);
+        // Get the HTML for the rep group details
+        // The render_rep_group_details_html method expects $post_id, $area_name_context, and $area_color.
+        // For $area_color in this context, we'll use the rep group's own map color.
+        $html_content = $this->render_rep_group_details_html($rep_group_id, $area_name_context, $rep_group_color);
+
+        if (empty($html_content)) {
+            wp_send_json_error(['message' => 'Could not generate rep group details.']);
+            return;
+        }
+
+        wp_send_json_success([
+            'html' => $html_content,
+            'color' => $rep_group_color // Add the color to the response
+        ]);
     }
-
 
     /**
      * Helper function to render the HTML for a single Rep Group's details.

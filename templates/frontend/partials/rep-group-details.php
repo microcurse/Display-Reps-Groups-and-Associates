@@ -35,7 +35,7 @@ $default_detail_header_color = defined('REP_GROUP_DEFAULT_REGION_COLOR') ? REP_G
 $header_color = !empty($area_color) ? $area_color : $default_detail_header_color;
 
 ?>
-<div class="rep-group-details-header" style="background-color: <?php echo esc_attr($header_color); ?>;">
+<div class="rep-group-details-header">
     <?php if ($logo_url) : ?>
         <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($title); ?> logo" class="rep-group-logo-map">
     <?php endif; ?>
