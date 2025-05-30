@@ -328,7 +328,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    width: 380px;
+    width: 400px;
     max-width: 90%;
     overflow-y: auto;
 }

@@ -12,9 +12,12 @@ if (!isset($map_instance_id)) {
     $map_instance_id = 'map-instance-fallback-' . wp_generate_uuid4(); 
 }
 ?>
-<ul class="rep-group-list-map-default default-rep-group-list">
-    <?php if (empty($all_rep_groups)) : ?>
-        <li>No rep groups found.</li>
+<div class="rep-group-list-container">
+    <h2>Rep Groups</h2>
+    <p>All Forbes Reps Groups and Associates.</p>
+    <ul class="rep-group-list-map-default default-rep-group-list">
+        <?php if (empty($all_rep_groups)) : ?>
+            <li>No rep groups found.</li>
     <?php else : ?>
         <?php foreach ($all_rep_groups as $rep_group) : ?>
             <li data-rep-group-id="<?php echo esc_attr($rep_group->ID); ?>">
@@ -25,3 +28,4 @@ if (!isset($map_instance_id)) {
         <?php endforeach; ?>
     <?php endif; ?>
 </ul> 
+</div>

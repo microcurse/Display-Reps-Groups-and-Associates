@@ -15,9 +15,9 @@
           return;
       }
 
-      processSvg(svgElement, mapData);
+      const panZoomGroup = processSvg(svgElement, mapData);
       if (mapData.is_interactive) {
-          initPanZoomForMap(mapData.map_id, svgElement, mapData);
+          initPanZoomForMap(mapData.map_id, svgElement, panZoomGroup, mapData);
       }
   }
 
@@ -38,15 +38,16 @@
   }
 
   function processSvg(svgObjectElement, mapData) {
+      let panZoomGroup = $(); // Initialize as an empty jQuery object
       try {
           const svgRoot = svgObjectElement;
 
           if (!svgRoot.length) {
               console.error('RepMap: SVG root element not found (this should be the passed element).', svgObjectElement[0]);
-              return;
+              return panZoomGroup; // Return empty group on error
           }
 
-          let panZoomGroup = svgRoot.find('> g.rep-map-pan-zoom-group');
+          panZoomGroup = svgRoot.find('> g.rep-map-pan-zoom-group');
           if (!panZoomGroup.length) {
               const newG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
               panZoomGroup = $(newG).addClass('rep-map-pan-zoom-group');
@@ -89,7 +90,10 @@
           });
       } catch (e) {
           console.error('RepMap: Error processing frontend SVG:', e);
+          // If an error occurred, panZoomGroup might be the last valid one or the initial empty one.
+          // It will be returned as is.
       }
+      return panZoomGroup; // Always return the panZoomGroup
   }
   
   function displayRepInfoForArea(areaSlug, areaColor, mapInstanceId, nonce, ajaxUrl, defaultRegionColorParam) {
@@ -377,26 +381,22 @@
       applyTransform(state);
   }
 
-  function initPanZoomForMap(mapInstanceId, svgElement, mapData) {
+  function initPanZoomForMap(mapInstanceId, svgElement, panZoomGroupElement, mapData) {
       const viewport = $(svgElement).parent('.svg-viewport');
 
       if (!viewport.length) {
-          console.error('SVG viewport not found for map:', mapInstanceId);
+          console.error('RepMap: SVG viewport not found for map:', mapInstanceId);
           return;
       }
 
       const svgRootElement = svgElement; 
-      let panZoomGroupElement = null;
 
-      if (svgRootElement && svgRootElement.length) {
-          panZoomGroupElement = svgRootElement.find('> g.rep-map-pan-zoom-group');
-          if (!panZoomGroupElement.length) {
-              console.error('RepMap: panZoomGroup not found inside SVG for map by initPanZoomForMap:', mapInstanceId);
-          }
-      } else {
-          console.error('RepMap: svgRootElement (the inline <svg>) not found for map by initPanZoomForMap:', mapInstanceId);
+      if (!panZoomGroupElement || !panZoomGroupElement.length) {
+          console.error('RepMap: panZoomGroupElement is invalid or not received in initPanZoomForMap for:', mapInstanceId + ". Pan/zoom will not be initialized.");
+          return; // Critical error, cannot proceed with pan/zoom
       }
 
+      // Ensure mapStates[mapInstanceId] is initialized before accessing its properties
       mapStates[mapInstanceId] = {
           scale: 1,
           panX: 0,
@@ -408,8 +408,8 @@
           startY: 0,              
           lastMouseX: 0,
           lastMouseY: 0,
-          svgRoot: svgRootElement,       // The inline <svg> element (jQuery object)
-          panZoomGroup: panZoomGroupElement, // The <g> inside the SVG
+          svgRoot: svgRootElement,       
+          panZoomGroup: panZoomGroupElement, // Use the passed element
           viewport: viewport,
           minScale: 0.5, 
           maxScale: 5,   
@@ -417,8 +417,7 @@
       };
 
       const state = mapStates[mapInstanceId];
-      const mapId = mapInstanceId; // Alias for clarity in the rAF callback
-      const panZoomGroup = state.panZoomGroup; // Alias for clarity
+      const mapId = mapInstanceId; 
 
       // Defer the dimension calculation and initial transform to the next animation frame
       requestAnimationFrame(() => {
@@ -457,10 +456,10 @@
               mapStates[mapId].currentPan = { x: panX, y: panY };
 
               // Removed console.log for Applying initial transform
-              if (panZoomGroup && panZoomGroup.length) {
-                  panZoomGroup.css('transform', `translate(${panX}px, ${panY}px) scale(${scale})`);
+              if (state.panZoomGroup && state.panZoomGroup.length) {
+                  state.panZoomGroup.attr('transform', `translate(${panX} ${panY}) scale(${scale})`);
               } else {
-                  console.warn(`RepMap (rAF): panZoomGroup not found for ${mapId} when trying to apply initial transform.`);
+                  console.warn(`RepMap (rAF): panZoomGroup not found in state for ${mapId} when trying to apply initial transform.`);
               }
           }
       });
