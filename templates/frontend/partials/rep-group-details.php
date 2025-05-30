@@ -44,7 +44,7 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
     $is_generic_context = in_array($area_name_context, ['Details for this Rep Group', 'Not specified', 'Error fetching areas'], true);
     if (!empty($area_name_context) && !$is_generic_context) : 
     ?>
-        <div class="area-served-info">
+        <div class="area-served-info" style="border-left-color: <?php echo esc_attr($header_color); ?>;">
             <span class="area-label">Area Served:</span>
             <span class="area-values"><?php echo esc_html($area_name_context); ?></span>
         </div>

@@ -486,29 +486,6 @@
     background-color: transparent; 
 }
 
-.rep-map-details-content.has-left-border {
-    position: relative; 
-    border-left: 5px solid transparent; 
-}
-
-.rep-map-details-content.has-left-border::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 5px; 
-    background-color: var(--rep-group-color, #0073aa); 
-    transform: scaleY(0); 
-    transform-origin: top; 
-    transition: transform 0.3s ease-in-out; 
-    z-index: 1; 
-}
-
-.rep-map-details-content.has-left-border.animate-border-in::before {
-    transform: scaleY(1); 
-}
-
 .rep-map-details-content .back-to-map-default {
     display: inline-block;
     background-color: transparent;
@@ -634,6 +611,8 @@
 /* Area Served Styling */
 .area-served-info {
     margin-bottom: 8px; 
+    padding-left: 10px; 
+    border-left: 5px solid transparent;
 }
 
 .area-label {
@@ -672,6 +651,11 @@
     font-size: 1.2em; 
     font-weight: bold;
     margin: 0 0 5px 0;
+}
+
+.rep-associate-areas-served {
+    padding-left: 0;
+    border-left: none; 
 }
 
 ion-icon {
