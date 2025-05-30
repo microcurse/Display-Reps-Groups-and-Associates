@@ -4,9 +4,10 @@ namespace RepGroup;
 class Post_Type {
     public function __construct() {
         add_action('init', [$this, 'register_post_type']);
-        add_action('init', [$this, 'register_taxonomies']);
+        add_action('add_meta_boxes_rep-group', [$this, 'add_custom_meta_boxes']);
         add_action('admin_menu', [$this, 'remove_author_metabox']);
         add_filter('post_row_actions', [$this, 'modify_list_row_actions'], 10, 2);
+        add_filter('acf/validate_value/name=area-served', [$this, 'validate_unique_area_served_assignment'], 10, 4);
     }
 
     public function register_post_type() {
@@ -58,35 +59,15 @@ class Post_Type {
         register_post_type('rep-group', $args);
     }
 
-    public function register_taxonomies() {
-        $labels = [
-            'name'              => 'Areas Served',
-            'singular_name'     => 'Area Served',
-            'search_items'      => 'Search Areas',
-            'all_items'         => 'All Areas',
-            'parent_item'       => 'Parent Area',
-            'parent_item_colon' => 'Parent Area:',
-            'edit_item'         => 'Edit Area',
-            'update_item'       => 'Update Area',
-            'add_new_item'      => 'Add New Area',
-            'new_item_name'     => 'New Area Name',
-            'menu_name'         => 'Areas Served'
-        ];
-
-        $args = [
-            'hierarchical'      => true,
-            'labels'            => $labels,
-            'show_ui'           => true,
-            'show_admin_column' => true,
-            'query_var'         => true,
-            'show_in_rest'      => true,
-            'rewrite'           => [
-                'slug' => 'area-served',
-                'with_front' => true
-            ],
-        ];
-
-        register_taxonomy('area-served', ['rep-group'], $args);
+    public function add_custom_meta_boxes() {
+        add_meta_box(
+            'rep_group_shortcode_metabox', // Unique ID
+            'Shortcode',                  // Box title
+            [$this, 'render_shortcode_meta_box'],  // Content callback
+            'rep-group',                  // Post type
+            'side',                       // Context (normal, side, advanced)
+            'low'                         // Priority (high, core, default, low)
+        );
     }
 
     public function remove_author_metabox() {
@@ -101,6 +82,89 @@ class Post_Type {
     }
 
     public function render_shortcode_meta_box($post) {
-        require REP_GROUP_PATH . 'templates/admin/shortcode-box.php';
+        $template_path = REP_GROUP_PATH . 'templates/admin/shortcode-box.php';
+        if (file_exists($template_path)) {
+            include $template_path;
+        } else {
+            echo '<p>Error: Shortcode display template not found.</p>';
+        }
+    }
+
+    /**
+     * Validate that an "Area Served" term is not already assigned to another Rep Group.
+     *
+     * @param mixed $valid Whether the value is valid (boolean) or a custom error message (string).
+     * @param mixed $value The value of the field.
+     * @param array $field The ACF field array.
+     * @param string $input_name The input name of the field (e.g., acf[field_xxxxxxxxxxxxx]).
+     * @return mixed True if valid, or a string error message if invalid.
+     */
+    public function validate_unique_area_served_assignment($valid, $value, $field, $input_name) {
+        // If the value is already marked invalid by another validation, or if it's empty, don't proceed.
+        if (!$valid || empty($value)) {
+            return $valid;
+        }
+
+        global $post;
+        $current_post_id = 0;
+
+        if (isset($_POST['post_ID'])) { // Standard post edit screen
+            $current_post_id = absint($_POST['post_ID']);
+        } elseif (is_admin() && function_exists('get_current_screen')) { // Check if on admin screen
+            $screen = get_current_screen();
+            if ($screen && $screen->post_type === 'rep-group' && $screen->base === 'post' && isset($post->ID)) {
+                 // When creating a new post, $post might be set but ID might be 0 before first save.
+                 // For existing posts, $post->ID should be reliable here.
+                $current_post_id = $post->ID;
+            }
+        }       
+        // Note: For AJAX or REST API context where global $post or $_POST['post_ID'] isn't available,
+        // this validation might need a more robust way to get the current post ID if the validation is triggered there.
+        // ACF usually provides context, but it can vary.
+
+        $term_ids_being_assigned = (array) $value; 
+
+        foreach ($term_ids_being_assigned as $term_id) {
+            $term_id = absint($term_id);
+            if (!$term_id) continue;
+
+            $term = get_term($term_id, 'area-served');
+            if (!$term || is_wp_error($term)) {
+                continue; 
+            }
+
+            $args = [
+                'post_type' => 'rep-group',
+                'posts_per_page' => 1, 
+                'post_status' => 'publish', 
+                'fields' => 'ids', 
+                'tax_query' => [
+                    [
+                        'taxonomy' => 'area-served',
+                        'field'    => 'term_id',
+                        'terms'    => $term_id,
+                    ],
+                ],
+            ];
+
+            if ($current_post_id > 0) {
+                $args['post__not_in'] = [$current_post_id]; // Exclude the current post being saved
+            }
+
+            $conflicting_posts = get_posts($args);
+
+            if (!empty($conflicting_posts)) {
+                $conflicting_post_id = $conflicting_posts[0];
+                $conflicting_post_title = get_the_title($conflicting_post_id);
+                // Ensure __() is available. It should be as this is WordPress context.
+                return sprintf(
+                    __('Error: The area "%1$s" is already assigned to another Rep Group (%2$s - ID: %3$s). Each area can only be assigned to one Rep Group.', 'rep-group'),
+                    esc_html($term->name),
+                    esc_html($conflicting_post_title),
+                    esc_html($conflicting_post_id)
+                );
+            }
+        }
+        return $valid; // If no conflicts, the value is valid
     }
 }

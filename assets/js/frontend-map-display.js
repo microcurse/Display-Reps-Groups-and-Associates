@@ -123,7 +123,7 @@
               infoTarget.html(response.data.html);
               // Optionally, re-apply color to the clicked SVG element if backend sends a definitive color
               if (response.data.color && response.data.term_name) { // Ensure term_name (slug) is also part of response if needed to find element
-                  const svgObject = mapInteractiveArea.find('object.rep-group-map-svg');
+                  const svgObject = mapInteractiveArea.find('object.rep-group-map-svg-object');
                   if (svgObject.length && svgObject[0].contentDocument) {
                       const svgDoc = svgObject[0].contentDocument;
                       // areaSlug is the ID of the clicked element

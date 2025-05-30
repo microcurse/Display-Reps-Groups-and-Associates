@@ -35,8 +35,8 @@ class Map_Settings {
     }
 
     public function register_settings() {
-        register_setting('rep_group_map_options', 'rep_group_local_svg');
-        register_setting('rep_group_map_options', 'rep_group_international_svg');
+        register_setting('rep_group_map_options', 'rep_group_local_svg', ['sanitize_callback' => 'esc_url_raw']);
+        register_setting('rep_group_map_options', 'rep_group_international_svg', ['sanitize_callback' => 'esc_url_raw']);
 
         add_settings_section(
             'rep_group_map_section',

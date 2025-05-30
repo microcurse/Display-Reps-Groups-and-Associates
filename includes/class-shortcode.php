@@ -46,117 +46,41 @@ class Shortcode {
      * Render a single rep group
      */
     private function render_single_rep_group($post_id) {
-        $output = '<section class="rep-group">';
+        ob_start();
         
-        // Get Area Served from taxonomy
-        $areas = get_the_terms($post_id, 'area-served');
-        if ($areas && !is_wp_error($areas)) {
-            $output .= '<div class="area-served">';
-            $output .= '<strong>Area Served:</strong> ';
-            $area_names = array_map(function($term) {
-                return esc_html($term->name);
-            }, $areas);
-            $output .= sprintf('<span>%s</span>', implode(', ', $area_names));
-            $output .= '</div>';
-        }
+        // Pass $post_id and $this (as $shortcode_instance) to the template
+        $shortcode_instance = $this;
+        $template_path = REP_GROUP_PATH . 'templates/frontend/single-rep-group.php';
 
-        // Address Container
-        $address = get_field('rg_address_container', $post_id);
-        if ($address && is_array($address)) {
-            $output .= $this->render_address($address);
+        if (file_exists($template_path)) {
+            include $template_path;
+        } else {
+            echo '<p>Error: Single rep group template not found.</p>';
         }
-
-        // Rep Associates
-        if (have_rows('rep_associates', $post_id)) {
-            $output .= $this->render_rep_associates($post_id);
-        }
-
-        $output .= '</section>';
-        return $output;
+        
+        return ob_get_clean();
     }
 
     /**
      * Helper method to render address
      */
-    private function render_address($address) {
-        $output = '<div class="address">';
-        $output .= '<strong>Address:</strong>';
-        $output .= '<div class="address-content">';
-        
-        if (!empty($address['rg_address_1'])) {
-            $output .= sprintf('<p>%s</p>', esc_html($address['rg_address_1']));
-        }
-        if (!empty($address['rg_address_2'])) {
-            $output .= sprintf('<p>%s</p>', esc_html($address['rg_address_2']));
-        }
-        if (!empty($address['rg_city']) || !empty($address['rg_state']) || !empty($address['rg_zip_code'])) {
-            $output .= sprintf(
-                '<p>%s%s%s</p>',
-                !empty($address['rg_city']) ? esc_html($address['rg_city']) . ', ' : '',
-                !empty($address['rg_state']) ? esc_html($address['rg_state']) . ' ' : '',
-                !empty($address['rg_zip_code']) ? esc_html($address['rg_zip_code']) : ''
-            );
-        }
-        
-        $output .= '</div></div>';
-        return $output;
-    }
+    // private function render_address($address) { ... } // REMOVED
 
     /**
      * Helper method to render rep associates
      */
-    private function render_rep_associates($post_id) {
-        $output = '<div class="rep-associates-section">';
-
-        $output .= '<div class="rep-card-grid">';
-        
-        if (have_rows('rep_associates', $post_id)) { // Check before looping
-            while (have_rows('rep_associates', $post_id)) {
-                the_row();
-                $user_id = get_sub_field('rep_user');
-                $user_data = $user_id ? get_userdata($user_id) : null;
-                $email_override = get_sub_field('rep_contact_email_override');
-                $phone_override = get_sub_field('rep_contact_phone_override');
-                $associate_specific_areas = get_sub_field('associate_specific_areas_text'); // New text field
-
-                $output .= $this->render_rep_card($user_data, $email_override, $phone_override, $associate_specific_areas);
-            }
-        }
-        
-        $output .= '</div></div>';
-        return $output;
-    }
+    // private function render_rep_associates($post_id) { ... } // REMOVED
 
     /**
      * Helper method to render individual rep card
      */
-    private function render_rep_card($user_data, $email_override, $phone_override, $associate_specific_areas_text) {
-        $output = '<div class="rep-card">';
-
-        if ($user_data) {
-            $output .= sprintf('<h3 class="rep-name">%s</h3>', esc_html($user_data->display_name));
-        } else {
-            $output .= '<h3 class="rep-name">Associate Name Not Found</h3>';
-        }
-
-        // Display associate specific areas text
-        if (!empty($associate_specific_areas_text)) {
-            $output .= sprintf('<p class="rep-territory"><strong>Specific Areas:</strong> %s</p>', esc_html($associate_specific_areas_text));
-        }
-
-        $output .= '<div class="rep-contact-info">';
-        $output .= $this->render_rep_contact_info($user_data, $email_override, $phone_override);
-        $output .= '</div>';
-
-        $output .= '</div>';
-        return $output;
-    }
+    // private function render_rep_card($user_data, $email_override, $phone_override, $associate_specific_areas_text) { ... } // REMOVED
 
     /**
      * Helper method to render rep contact info
      * Now accepts user_data and overrides
      */
-    private function render_rep_contact_info($user_data, $email_override, $phone_override) {
+    public function render_rep_contact_info($user_data, $email_override, $phone_override) {
         $output = '';
 
         // Display Phone (Override first, then potentially from user profile if we add that later)
@@ -229,36 +153,11 @@ class Shortcode {
         }
 
         $map_instance_id = 'rep-map-instance-' . esc_attr($map_type) . '-' . wp_generate_uuid4();
-        $output = sprintf(
-            '<div id="%s" class="rep-group-map-interactive-area %s-map-interactive-area">',
-            esc_attr($map_instance_id),
-            esc_attr($map_type)
-        );
-        // Two-column layout: Info Panel (Left), Map (Right)
-        $output .= '<div class="rep-map-info-column">';
-        // Default content for the info column (e.g., list of all rep groups)
-        $output .= '<div class="rep-map-default-content panel-active">';
-        $output .= '<h4>All Rep Groups</h4>';
-        $output .= $this->get_all_rep_groups_list_html($map_instance_id); // Pass map_instance_id
-        $output .= '</div>';
-        // Placeholder for detailed rep group info when an area is clicked
-        $output .= '<div class="rep-map-details-content panel-hidden">';
-        $output .= '<a href="#" class="back-to-map-default" role="button">&laquo; Back to Overview</a>';
-        $output .= '<div class="rep-group-info-target"></div>';
-        $output .= '</div>'; // End rep-map-details-content
-        $output .= '</div>'; // End rep-map-info-column
+        
+        // Get the default panel content using the already refactored method
+        $default_panel_content = $this->get_all_rep_groups_list_html($map_instance_id);
 
-        $output .= '<div class="rep-map-svg-column">';
-        $output .= sprintf(
-            '<object id="rep-map-svg-%s" class="rep-group-map-svg-object" type="image/svg+xml" data="%s" aria-label="%s map"></object>',
-            esc_attr($map_type),
-            esc_url($svg_url),
-            esc_attr(ucfirst($map_type))
-        );
-        $output .= '</div>'; // End rep-map-svg-column
-        $output .= '</div>'; // End rep-group-map-interactive-area
-
-        // Prepare data for frontend JavaScript
+        // Prepare data for frontend JavaScript (this logic remains the same)
         $area_colors_and_terms = [];
         $rep_groups_query_args = [
             'post_type' => 'rep-group',
@@ -268,30 +167,25 @@ class Shortcode {
         $rep_groups = get_posts($rep_groups_query_args);
 
         foreach ($rep_groups as $rep_group) {
-
-            $color = get_field('rep_group_map_color', $rep_group->ID);
-            if (empty($color)) {
-                $color = REP_GROUP_DEFAULT_REGION_COLOR; // Use defined default color
-            }
+            // Determine color with hierarchy: Term Meta > Rep Group Field > Default
             $terms = get_the_terms($rep_group->ID, 'area-served');
-
             if ($terms && !is_wp_error($terms)) {
                 foreach ($terms as $term) {
-
-                    // USE THE CUSTOM META FIELD FOR SVG ID
                     $svg_id_meta = get_term_meta($term->term_id, '_rep_svg_target_id', true);
-                    
-
                     if (!empty($svg_id_meta)) {
+                        // Color source: Rep Group CPT field 'rep_group_map_color', then default.
+                        $color = get_field('rep_group_map_color', $rep_group->ID);
+                        if (empty($color)) {
+                            $color = REP_GROUP_DEFAULT_REGION_COLOR;
+                        }
+                        
                         $svg_id_key = ltrim($svg_id_meta, '#');
                         $area_colors_and_terms[$svg_id_key] = [
-                            'color' => $color,
+                            'color' => $color, // Corrected: Use $color directly
                             'term_id' => $term->term_id,
                             'term_name' => $term->name,
                             'term_slug' => $term->slug
                         ];
-                    } else {
-                        // Fallback or skip if SVG ID meta is not set for a term
                     }
                 }
             }
@@ -303,13 +197,23 @@ class Shortcode {
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('rep_map_nonce'),
             'svg_url' => $svg_url,
-            'area_data' => $area_colors_and_terms, // New: term slug -> {color, term_id, term_name}
+            'area_data' => $area_colors_and_terms, 
             'map_id' => esc_attr($map_instance_id),
             'default_region_color' => REP_GROUP_DEFAULT_REGION_COLOR,
             'is_interactive' => $is_interactive,
         ]);
 
-        return $output;
+        // Use output buffering to capture the template output
+        ob_start();
+        $template_path = REP_GROUP_PATH . 'templates/frontend/interactive-map-layout.php';
+        if (file_exists($template_path)) {
+            // Variables $map_instance_id, $map_type, $svg_url, $default_panel_content 
+            // will be available in the template's scope.
+            include $template_path;
+        } else {
+            echo '<!-- Rep map layout template not found. -->';
+        }
+        return ob_get_clean();
     }
 
     /**
@@ -433,134 +337,31 @@ class Shortcode {
      * @return string HTML content.
      */
     private function render_rep_group_details_html($post_id, $area_name_context, $area_color) {
-        $output = '';
-        $title = get_the_title($post_id);
-        $logo_url = get_the_post_thumbnail_url($post_id, 'medium');
+        // Prepare variables for the template
+        // $post_id, $area_name_context, and $area_color are passed as arguments.
+        // $shortcode_instance will be $this within the template.
 
-        // Header with background color
-        $output .= sprintf(
-            '<div class="rep-group-details-header" style="background-color: %s;">',
-            esc_attr($area_color)
-        );
-        if ($logo_url) {
-            $output .= sprintf('<img src="%s" alt="%s logo" class="rep-group-logo-map">', esc_url($logo_url), esc_attr($title));
-        }
-        // Rep Group Title and Area Context - Using h3 for Rep Group title, p for context
-        $output .= sprintf(
-            '<h3 class="rep-group-title-map">%s</h3><p class="area-context-map">Areas Served: <span class="area-name-highlighted">%s</span></p>',
-            esc_html($title),
-            esc_html($area_name_context)
-        );
-        $output .= '</div>'; // End rep-group-details-header
-
-        $output .= '<div class="rep-group-details-body">';
-
-        // Address
-        $address_data = get_field('rg_address_container', $post_id);
-        if ($address_data && is_array($address_data)) {
-            $output .= '<div class="rep-group-contact-section address-details">';
-            $output .= '<h4><ion-icon name="location-outline"></ion-icon> Address</h4>';
-            $full_address = '';
-            if (!empty($address_data['rg_address_1'])) $full_address .= esc_html($address_data['rg_address_1']) . '<br>';
-            if (!empty($address_data['rg_address_2'])) $full_address .= esc_html($address_data['rg_address_2']) . '<br>';
-            $city_state_zip = [];
-            if (!empty($address_data['rg_city'])) $city_state_zip[] = esc_html($address_data['rg_city']);
-            if (!empty($address_data['rg_state'])) $city_state_zip[] = esc_html($address_data['rg_state']);
-            if (!empty($address_data['rg_zip_code'])) $city_state_zip[] = esc_html($address_data['rg_zip_code']);
-            if (!empty($city_state_zip)) $full_address .= implode(', ', $city_state_zip);
-            
-            if (!empty($full_address)) {
-                $output .= sprintf('<p>%s</p>', $full_address);
-            } else {
-                $output .= '<p>Address not available.</p>';
-            }
-            $output .= '</div>';
-        }
+        ob_start();
         
-        // Phone Numbers (Repeater: rg_phone_numbers)
-        if (have_rows('rg_phone_numbers', $post_id)) {
-            $output .= '<div class="rep-group-contact-section phone-details">';
-            $output .= '<h4><ion-icon name="call-outline"></ion-icon> Phone Numbers</h4>';
-            while (have_rows('rg_phone_numbers', $post_id)) {
-                the_row();
-                $phone_type = get_sub_field('rep_phone_type');
-                $phone_number = get_sub_field('rep_phone_number');
-                if ($phone_number) {
-                    $output .= sprintf(
-                        '<p><strong>%s:</strong> <a href="tel:%s">%s</a></p>',
-                        esc_html($phone_type ?: 'Phone'),
-                        esc_attr(preg_replace('/[^0-9+]/', '', $phone_number)),
-                        esc_html($phone_number)
-                    );
-                }
-            }
-            $output .= '</div>';
+        // Make variables available to the template file
+        // Note: WordPress's get_template_part or similar functions often handle variable scoping implicitly.
+        // For a direct include, explicitly setting them or ensuring they are in the current scope is needed.
+        // However, PHP's include will inherit the current variable scope.
+        
+        // We need to ensure the template can call $this->render_rep_contact_info
+        // So, we'll pass $this as $shortcode_instance to the template.
+        $shortcode_instance = $this; 
+
+        $template_path = REP_GROUP_PATH . 'templates/frontend/partials/rep-group-details.php';
+
+        if (file_exists($template_path)) {
+            include $template_path;
+        } else {
+            // Fallback or error message if template is not found
+            echo '<p>Error: Rep group details template not found.</p>';
         }
 
-        // Email (Single field: rg_email)
-        $email = get_field('rg_email', $post_id);
-        if ($email && is_email($email)) {
-            $output .= '<div class="rep-group-contact-section email-details">';
-            $output .= '<h4><ion-icon name="mail-outline"></ion-icon> Email</h4>';
-            $output .= sprintf(
-                '<p><a href="mailto:%s">%s</a></p>',
-                esc_attr($email),
-                esc_html($email)
-            );
-            $output .= '</div>';
-        }
-
-        // Website (Single field: rg_website)
-        $website = get_field('rg_website', $post_id);
-        if ($website) {
-            $output .= '<div class="rep-group-contact-section website-details">';
-            $output .= '<h4><ion-icon name="globe-outline"></ion-icon> Website</h4>';
-            $output .= sprintf(
-                '<p><a href="%s" target="_blank" rel="noopener noreferrer">%s</a></p>',
-                esc_url($website),
-                esc_html($website) // Or a more friendly display like the domain name
-            );
-            $output .= '</div>';
-        }
-
-        // Rep Associates
-        if (have_rows('rep_associates', $post_id)) {
-            $output .= '<div class="rep-associates-map-display rep-group-contact-section">'; // Added rep-group-contact-section for consistent styling
-            $output .= '<h4><ion-icon name="people-outline"></ion-icon> Team</h4>';
-            while (have_rows('rep_associates', $post_id)) {
-                the_row();
-                $user_id = get_sub_field('rep_user');
-                $user_data = $user_id ? get_userdata($user_id) : null;
-                $output .= '<div class="associate-card">'; // Start associate card
-                
-                if ($user_data) {
-                    $output .= sprintf('<h5>%s</h5>', esc_html($user_data->display_name));
-                } else {
-                    $output .= '<h5>Associate</h5>';
-                }
-
-                // Associate Specific Areas Text
-                $associate_specific_areas = get_sub_field('associate_specific_areas_text');
-                if (!empty($associate_specific_areas)) {
-                    $output .= sprintf('<p class="associate-areas"><em>%s</em></p>', esc_html($associate_specific_areas));
-                }
-
-                // Contact Info for Associate
-                $email_override = get_sub_field('rep_contact_email_override');
-                $phone_override = get_sub_field('rep_contact_phone_override');
-                
-                $contact_info_html = $this->render_rep_contact_info($user_data, $email_override, $phone_override);
-                if (!empty(trim($contact_info_html))) {
-                     $output .= '<div class="associate-contact-map">' . $contact_info_html . '</div>';
-                }
-
-                $output .= '</div>'; // End associate card
-            }
-            $output .= '</div>'; // End rep-associates-map-display
-        }
-        $output .= '</div>'; // End rep-group-details-body
-
-        return $output;
+        return ob_get_clean();
     }
     
     /**
@@ -568,7 +369,6 @@ class Shortcode {
      * Includes data attributes for AJAX loading.
      */
     private function get_all_rep_groups_list_html($map_instance_id) {
-        $output = '<ul class="rep-group-list-map-default default-rep-group-list">'; // Added default-rep-group-list class
         $rep_groups_query_args = [
             'post_type' => 'rep-group',
             'posts_per_page' => -1,
@@ -578,25 +378,18 @@ class Shortcode {
         ];
         $all_rep_groups = get_posts($rep_groups_query_args);
 
-        if (empty($all_rep_groups)) {
-            $output .= '<li>No rep groups found.</li>';
+        ob_start();
+        
+        // Variables $all_rep_groups and $map_instance_id will be available in the template scope.
+        $template_path = REP_GROUP_PATH . 'templates/frontend/partials/all-rep-groups-list.php';
+
+        if (file_exists($template_path)) {
+            include $template_path;
         } else {
-            foreach ($all_rep_groups as $rep_group) {
-                $output .= sprintf(
-                    '<li data-rep-group-id="%d">', // Data attribute for JS
-                    esc_attr($rep_group->ID)
-                );
-                $output .= sprintf(
-                    '<a href="#" class="rep-group-list-item-link" data-map-instance-id="%s">',
-                    esc_attr($map_instance_id) 
-                );
-                $output .= esc_html(get_the_title($rep_group->ID));
-                $output .= '</a>';
-                $output .= '</li>';
-            }
+            echo '<li>Error: All rep groups list template not found.</li>'; // Fallback
         }
-        $output .= '</ul>';
-        return $output;
+        
+        return ob_get_clean();
     }
 
 } // End Class

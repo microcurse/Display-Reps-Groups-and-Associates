@@ -13,10 +13,7 @@ class Asset_Manager {
             return;
         }
 
-        wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css');
         wp_enqueue_style('rep-group-admin', REP_GROUP_URL . 'assets/css/admin.css', [], REP_GROUP_VERSION);
-        
-        wp_enqueue_script('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', ['jquery'], '4.1.0', true);
     }
 
     private function is_plugin_admin_page($hook_suffix) { // hook_suffix is $hook passed to admin_enqueue_scripts
@@ -105,16 +102,5 @@ class Asset_Manager {
             }
             wp_localize_script('rep-group-frontend-base', 'RepGroupData', $general_plugin_data);
         }
-    }
-
-    // ACF JSON Callbacks
-    public static function acf_json_save_point( $path ) {
-        return REP_GROUP_PATH . 'acf-json';
-    }
-
-    public static function acf_json_load_point( $paths ) {
-        unset($paths[0]); // Remove the original path
-        $paths[] = REP_GROUP_PATH . 'acf-json'; // Add our plugin's path
-        return $paths;
     }
 } 
