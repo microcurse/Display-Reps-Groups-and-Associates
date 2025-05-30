@@ -21,6 +21,23 @@ class Map_Settings {
             REP_GROUP_VERSION,
             true
         );
+
+        // Enqueue admin.js for the copy shortcode functionality
+        wp_enqueue_script(
+            'rep-group-admin-js-copier', // Use a distinct handle if admin.js is enqueued elsewhere
+            REP_GROUP_URL . 'assets/js/admin.js',
+            [], // admin.js appears to be vanilla JS, no specific dependencies like jQuery listed for its core function
+            REP_GROUP_VERSION,
+            true
+        );
+
+        // Enqueue admin.css for the shortcode display styles
+        wp_enqueue_style(
+            'rep-group-admin-css', // Use a distinct handle
+            REP_GROUP_URL . 'assets/css/admin.css',
+            [],
+            REP_GROUP_VERSION
+        );
     }
 
     public function add_settings_page() {
@@ -78,6 +95,7 @@ class Map_Settings {
                 submit_button();
                 ?>
             </form>
+
         </div>
         <?php
     }
@@ -88,6 +106,12 @@ class Map_Settings {
         <input type="text" id="rep_group_local_svg" name="rep_group_local_svg" value="<?php echo esc_attr($option); ?>" class="regular-text">
         <input type="button" id="upload_local_svg_button" class="button" value="Upload SVG">
         <p class="description">Upload or enter the URL for the Local Rep Map SVG.</p>
+        <p class="description">Shortcode: 
+            <span class="rep-group-shortcode" title="Click to copy shortcode" style="display: inline-block; padding: 2px 5px; background-color: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; cursor: pointer;">
+                [rep_map type="local"]
+            </span>
+            <span class="shortcode-copied" style="display: none; margin-left: 5px; color: green;">Copied!</span>
+        </p>
         <?php
     }
 
@@ -97,6 +121,12 @@ class Map_Settings {
         <input type="text" id="rep_group_international_svg" name="rep_group_international_svg" value="<?php echo esc_attr($option); ?>" class="regular-text">
         <input type="button" id="upload_international_svg_button" class="button" value="Upload SVG">
         <p class="description">Upload or enter the URL for the International Rep Map SVG.</p>
+        <p class="description">Shortcode: 
+            <span class="rep-group-shortcode" title="Click to copy shortcode" style="display: inline-block; padding: 2px 5px; background-color: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; cursor: pointer;">
+                [rep_map type="international"]
+            </span>
+            <span class="shortcode-copied" style="display: none; margin-left: 5px; color: green;">Copied!</span>
+        </p>
         <?php
     }
 }
