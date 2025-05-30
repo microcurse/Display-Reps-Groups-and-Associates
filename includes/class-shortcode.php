@@ -308,28 +308,28 @@ class Shortcode {
             return;
         }
 
-        // Check if the post exists and is a 'rep-group'
         $post = get_post($rep_group_id);
         if (!$post || $post->post_type !== 'rep-group') {
             wp_send_json_error(['message' => 'Invalid Rep Group ID.']);
             return;
         }
 
-        // Fetch the color for the rep group
         $rep_group_color = get_field('rep_group_map_color', $rep_group_id);
         if (empty($rep_group_color)) {
             $rep_group_color = defined('REP_GROUP_DEFAULT_REGION_COLOR') ? REP_GROUP_DEFAULT_REGION_COLOR : '#CCCCCC';
         }
 
-        // Since this is a direct rep group lookup, area_name_context can be more general
-        // or derived from the terms associated with this rep group if needed.
-        // For simplicity, we might not need a specific area_name_context here, 
-        // or we can list all areas served by this rep group.
-        $area_name_context = 'Details for this Rep Group'; // Placeholder context
+        // Fetch Area Served terms for this Rep Group
+        $areas_served_terms = wp_get_object_terms($rep_group_id, 'area-served');
+        $area_name_context = 'Not specified'; // Default if no areas
+        if (!empty($areas_served_terms) && !is_wp_error($areas_served_terms)) {
+            $area_names = wp_list_pluck($areas_served_terms, 'name');
+            $area_name_context = implode(', ', $area_names);
+        } else if (is_wp_error($areas_served_terms)) {
+            // Optionally log the error: error_log('Error fetching terms for rep group ' . $rep_group_id . ': ' . $areas_served_terms->get_error_message());
+            $area_name_context = 'Error fetching areas';
+        }
 
-        // Get the HTML for the rep group details
-        // The render_rep_group_details_html method expects $post_id, $area_name_context, and $area_color.
-        // For $area_color in this context, we'll use the rep group's own map color.
         $html_content = $this->render_rep_group_details_html($rep_group_id, $area_name_context, $rep_group_color);
 
         if (empty($html_content)) {
