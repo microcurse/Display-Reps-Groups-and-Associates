@@ -4,7 +4,7 @@
  *
  * Expected variables:
  * $post_id (int) - The ID of the rep group post.
- * $shortcode_instance (RepGroup\Shortcode) - Instance of the Shortcode class to call helper methods.
+ * $shortcode_instance (RepGroup\\Shortcode) - Instance of the Shortcode class to call helper methods.
  */
 
 // Ensure $post_id is available.
@@ -14,10 +14,13 @@ if (empty($post_id) || !is_numeric($post_id)) {
 }
 
 // Ensure $shortcode_instance is available.
-if (empty($shortcode_instance) || !is_a($shortcode_instance, 'RepGroup\Shortcode')) {
+if (empty($shortcode_instance) || !is_a($shortcode_instance, 'RepGroup\\Shortcode')) {
     echo '<p>Error: Shortcode instance not available for single display template.</p>';
     return;
 }
+
+// Fetch Rep Group specific fields
+$rg_website = get_field('rg_website', $post_id);
 
 ?>
 <section class="rep-group rep-group-single-display">
@@ -67,6 +70,18 @@ if (empty($shortcode_instance) || !is_a($shortcode_instance, 'RepGroup\Shortcode
         </div>
     <?php endif; ?>
 
+    <?php // Website Section ?>
+    <?php if ($rg_website) : ?>
+        <div class="rep-group-website">
+            <strong>Website:</strong>
+            <p>
+                <a href="<?php echo esc_url($rg_website); ?>" target="_blank" rel="noopener noreferrer">
+                    <?php echo esc_html($rg_website); ?>
+                </a>
+            </p>
+        </div>
+    <?php endif; ?>
+
     <?php 
     // Rep Associates
     if (have_rows('rep_associates', $post_id)) :
@@ -82,9 +97,13 @@ if (empty($shortcode_instance) || !is_a($shortcode_instance, 'RepGroup\Shortcode
                 $phone_override = get_sub_field('rep_contact_phone_override');
                 $associate_specific_areas_text = get_sub_field('associate_specific_areas_text');
                 $associate_name = $user_data ? $user_data->display_name : 'Associate Name Not Found';
+                $rep_title = $user_id ? get_field('rep_title', 'user_' . $user_id) : '';
             ?>
                 <div class="rep-card">
                     <h3 class="rep-name"><?php echo esc_html($associate_name); ?></h3>
+                    <?php if ($rep_title) : ?>
+                        <p class="rep-title"><em><?php echo esc_html($rep_title); ?></em></p>
+                    <?php endif; ?>
                     <?php if (!empty($associate_specific_areas_text)) : ?>
                         <p class="rep-territory"><strong>Specific Areas:</strong> <?php echo esc_html($associate_specific_areas_text); ?></p>
                     <?php endif; ?>

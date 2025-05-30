@@ -46,6 +46,17 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
 </div>
 
 <div class="rep-group-details-body">
+    <?php // Website Section ?>
+    <?php if ($website) : ?>
+        <div class="rep-group-contact-section website-details">
+            <p>
+                <a href="<?php echo esc_url($website); ?>" target="_blank" rel="noopener noreferrer">
+                    <?php echo esc_html($website); ?>
+                </a>
+            </p>
+        </div>
+    <?php endif; ?>
+
     <?php // Address Section ?>
     <?php if ($address_data && is_array($address_data) && (!empty($address_data['rg_address_1']) || !empty($address_data['rg_city']) || !empty($address_data['rg_state']) || !empty($address_data['rg_zip_code']))) : ?>
         <div class="rep-group-contact-section address-details">
@@ -104,18 +115,6 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
         </div>
     <?php endif; ?>
 
-    <?php // Website Section ?>
-    <?php if ($website) : ?>
-        <div class="rep-group-contact-section website-details">
-            <h4><ion-icon name="globe-outline"></ion-icon> Website</h4>
-            <p>
-                <a href="<?php echo esc_url($website); ?>" target="_blank" rel="noopener noreferrer">
-                    <?php echo esc_html($website); ?>
-                </a>
-            </p>
-        </div>
-    <?php endif; ?>
-
     <?php // Rep Associates Section ?>
     <?php if (have_rows('rep_associates', $post_id)) : ?>
         <div class="rep-associates-map-display rep-group-contact-section">
@@ -125,9 +124,13 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
                 $user_id = get_sub_field('rep_user');
                 $user_data = $user_id ? get_userdata($user_id) : null;
                 $associate_name = $user_data ? $user_data->display_name : 'Associate';
+                $rep_title = $user_id ? get_field('rep_title', 'user_' . $user_id) : '';
                 ?>
                 <div class="associate-card">
                     <h5><?php echo esc_html($associate_name); ?></h5>
+                    <?php if ($rep_title) : ?>
+                        <p class="associate-title"><em><?php echo esc_html($rep_title); ?></em></p>
+                    <?php endif; ?>
                     <?php
                     $associate_specific_areas = get_sub_field('associate_specific_areas_text');
                     if (!empty($associate_specific_areas)) :
