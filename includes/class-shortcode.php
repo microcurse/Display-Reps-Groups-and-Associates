@@ -139,12 +139,50 @@ class Shortcode {
 
         $map_instance_id = 'rep-map-instance-' . esc_attr($map_type) . '-' . wp_generate_uuid4();
         
+        // --- Meta Query for Map Scope ---
+        $scope_meta_query = ['relation' => 'OR'];
+        if ($map_type === 'local') {
+            $scope_meta_query[] = [
+                'key' => 'rg_map_scope',
+                'value' => 'local',
+                'compare' => '='
+            ];
+            $scope_meta_query[] = [
+                'key' => 'rg_map_scope',
+                'value' => 'both',
+                'compare' => '='
+            ];
+        } elseif ($map_type === 'international') {
+            $scope_meta_query[] = [
+                'key' => 'rg_map_scope',
+                'value' => 'international',
+                'compare' => '='
+            ];
+            $scope_meta_query[] = [
+                'key' => 'rg_map_scope',
+                'value' => 'both',
+                'compare' => '='
+            ];
+        } else { // Fallback if map_type is somehow neither, though shortcode atts defaults to local
+             $scope_meta_query[] = [
+                'key' => 'rg_map_scope',
+                'value' => 'local', // Default to local if map_type is unexpected
+                'compare' => '='
+            ];
+             $scope_meta_query[] = [
+                'key' => 'rg_map_scope',
+                'value' => 'both',
+                'compare' => '='
+            ];
+        }
+
         // Data for map links (area_data)
-        $map_region_data = []; // Renamed from $map_links_with_term_slugs
+        $map_region_data = [];
         $rep_groups_query_args_for_map_links = [
             'post_type' => 'rep-group',
             'posts_per_page' => -1,
             'post_status' => 'publish',
+            'meta_query' => $scope_meta_query // Pass $scope_meta_query directly
         ];
         $rep_groups_for_map_links = get_posts($rep_groups_query_args_for_map_links);
 
@@ -171,13 +209,14 @@ class Shortcode {
         }
 
         // Data for the default "Rep Groups" list view
-        $all_rep_groups_data_asc = []; // Renamed for clarity
+        $all_rep_groups_data_asc = [];
         $all_rep_groups_query_args = [
             'post_type' => 'rep-group',
             'posts_per_page' => -1,
             'post_status' => 'publish',
             'orderby' => 'title',
             'order' => 'ASC',
+            'meta_query' => $scope_meta_query // Pass $scope_meta_query directly here as well
         ];
         $all_rep_groups_posts = get_posts($all_rep_groups_query_args);
         foreach ($all_rep_groups_posts as $group_post) {

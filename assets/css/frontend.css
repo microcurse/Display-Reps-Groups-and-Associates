@@ -393,7 +393,7 @@ h3.rep-map-list-title {
 
 .rep-map-info-column p, .rep-map-info-column li {
     color: var(--text-color);
-    font-size: var(--font-size-medium);
+    font-size: .95em;
     margin-bottom: 1em;
 }
 
@@ -555,7 +555,6 @@ h3.rep-map-list-title {
     margin-bottom: 8px; 
     padding-left: 10px; 
     border-left: 5px solid transparent;
-    color: #666;
 }
 
 .area-label {
@@ -565,6 +564,7 @@ h3.rep-map-list-title {
 
 .area-values {
     display: block; 
+    font-size: .95em;
 }
 
 .team-divider {

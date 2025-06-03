@@ -251,7 +251,7 @@
             "required": 0,
             "conditional_logic": 0,
             "wrapper": {
-                "width": "",
+                "width": "25",
                 "class": "",
                 "id": ""
             },
@@ -259,6 +259,36 @@
             "enable_opacity": 0,
             "return_format": "string",
             "allow_in_bindings": 0
+        },
+        {
+            "key": "field_683f64ffb6ecb",
+            "label": "Map Scope",
+            "name": "rg_map_scope",
+            "aria-label": "",
+            "type": "select",
+            "instructions": "",
+            "required": 0,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "25",
+                "class": "",
+                "id": ""
+            },
+            "choices": {
+                "local": "Local\/North American",
+                "international": "International",
+                "both": "Both Maps"
+            },
+            "default_value": "local",
+            "return_format": "value",
+            "multiple": 0,
+            "allow_null": 0,
+            "allow_in_bindings": 0,
+            "ui": 0,
+            "ajax": 0,
+            "placeholder": "",
+            "create_options": 0,
+            "save_options": 0
         }
     ],
     "location": [
@@ -279,5 +309,5 @@
     "active": true,
     "description": "",
     "show_in_rest": 0,
-    "modified": 1748624158
+    "modified": 1748985305
 }
