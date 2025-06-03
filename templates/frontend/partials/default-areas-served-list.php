@@ -33,10 +33,13 @@ if (!isset($default_region_color)) {
             }
             ?>
             <li data-area-slug="<?php echo esc_attr($term['slug']); ?>" 
-                data-svg-id="<?php echo esc_attr($svg_id_key); ?>" 
-                data-area-color="<?php echo esc_attr($area_color); ?>"
                 data-term-id="<?php echo esc_attr($term['id']); ?>">
-                <a href="#" class="area-served-list-item-link" data-map-instance-id="<?php echo esc_attr($map_instance_id); ?>">
+                <a href="#" 
+                   class="area-served-list-item-link" 
+                   data-map-instance-id="<?php echo esc_attr($map_instance_id); ?>"
+                   data-svg-id="<?php echo esc_attr($svg_id_key); ?>" 
+                   data-area-color="<?php echo esc_attr($area_color); ?>"
+                   data-area-name="<?php echo esc_attr($term['name']); ?>">
                     <span class="area-color-indicator" style="background-color:<?php echo esc_attr($area_color); ?>;"></span>
                     <span class="list-item-text"><?php echo esc_html($term['name']); ?></span>
                 </a>

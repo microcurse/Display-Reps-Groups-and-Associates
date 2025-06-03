@@ -275,6 +275,9 @@
     background-color: var(--wp--preset--color--base, #ffffff);
     border-right: 1px solid var(--wp--preset--color--contrast-2, #e0e0e0);
     box-sizing: border-box;
+    padding: 15px;
+    /* Ensure children don't cause overflow if not handled by them directly */
+    overflow: hidden; 
 }
 
 .rep-map-default-content,
@@ -287,8 +290,10 @@
     box-sizing: border-box;
     position: relative; /* Or absolute/fixed depending on broader layout, but relative is often safest for components */
     will-change: transform, opacity; /* Hint to browser for optimization */
+    width: 100%; /* Ensure panels take full width of info column */
 }
 
+/* OLD STYLES - No longer used due to dropdown and sort button implementation
 .rep-map-default-toggle {
     margin-bottom: var(--wp--preset--spacing--small, 10px);
     display: flex;
@@ -310,6 +315,7 @@
     color: var(--wp--preset--color--base, #ffffff);
     border-color: var(--wp--preset--color--primary, #0073aa);
 }
+*/
 
 h3.rep-map-list-title {
     font-size: 1.2em;
@@ -528,6 +534,7 @@ h3.rep-map-list-title {
     font-size: 1.3em; 
     margin-right: 10px;
     flex-shrink: 0; 
+    color: #6d747a;
 }
 
 .contact-item a {
@@ -663,3 +670,58 @@ ion-icon {
 .slide-out {
     animation: slideOutToLeft 0.25s forwards ease-in-out;
 }
+
+/* NEW STYLES FOR VIEW CONTROLS */
+.rep-map-view-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Space between title, select, and button */
+    margin-bottom: 15px;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+}
+
+/* .rep-map-view-by-title already has styles via .team-section-title, .rep-map-view-by-title */
+/* We only adjust its bottom margin if it's part of the flex container */
+.rep-map-view-controls .rep-map-view-by-title {
+    margin-bottom: 0; 
+    white-space: nowrap;
+}
+
+.view-by-select, 
+.sort-toggle-button {
+    padding: 8px 12px;
+    border: 1px solid var(--wp--preset--color--neutral-300, #ccc);
+    border-radius: 4px;
+    background-color: var(--wp--preset--color--base, #fff);
+    color: var(--wp--preset--color--contrast, #333);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.view-by-select:hover,
+.sort-toggle-button:hover {
+    background-color: var(--wp--preset--color--neutral-100, #f5f5f5);
+    border-color: var(--wp--preset--color--neutral-400, #bbb);
+}
+
+.view-by-select:focus,
+.sort-toggle-button:focus {
+    outline: 2px solid var(--wp--preset--color--primary, #0073aa);
+    outline-offset: 1px;
+}
+
+.sort-toggle-button {
+    display: inline-flex; /* Align icon and text */
+    align-items: center;
+    gap: 6px; /* Space between text and icon */
+}
+
+.sort-toggle-button ion-icon {
+    font-size: 1.1em; /* Adjust icon size relative to text */
+}
+
+/* END NEW STYLES FOR VIEW CONTROLS */
+
+/* The following h3.rep-map-list-title and .rep-map-list-container rules were placeholders and are removed. */
+/* The original rules for these selectors are earlier in the file and should remain active. */

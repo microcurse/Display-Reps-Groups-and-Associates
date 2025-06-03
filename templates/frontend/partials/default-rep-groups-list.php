@@ -17,8 +17,13 @@ if (!isset($map_instance_id)) {
         <li>No Rep Groups found.</li>
     <?php else : ?>
         <?php foreach ($rep_groups_data as $group) : ?>
-            <li data-rep-group-id="<?php echo esc_attr($group['id']); ?>">
-                <a href="#" class="rep-group-list-item-link" data-map-instance-id="<?php echo esc_attr($map_instance_id); ?>">
+            <li>
+                <a href="#" 
+                   class="rep-group-list-item-link" 
+                   data-rep-group-id="<?php echo esc_attr($group['id']); ?>" 
+                   data-map-instance-id="<?php echo esc_attr($map_instance_id); ?>"
+                   data-area-color="<?php echo esc_attr($group['color']); ?>">
+                    <span class="area-color-indicator" style="background-color:<?php echo esc_attr($group['color']); ?>;"></span>
                     <span class="list-item-text"><?php echo esc_html($group['title']); ?></span>
                 </a>
             </li>

@@ -171,7 +171,7 @@ class Shortcode {
         }
 
         // Data for the default "Rep Groups" list view
-        $all_rep_groups_data = [];
+        $all_rep_groups_data_asc = []; // Renamed for clarity
         $all_rep_groups_query_args = [
             'post_type' => 'rep-group',
             'posts_per_page' => -1,
@@ -181,21 +181,34 @@ class Shortcode {
         ];
         $all_rep_groups_posts = get_posts($all_rep_groups_query_args);
         foreach ($all_rep_groups_posts as $group_post) {
-            $all_rep_groups_data[] = [
+            $group_color = get_field('rep_group_map_color', $group_post->ID);
+            if (empty($group_color)) {
+                $group_color = REP_GROUP_DEFAULT_REGION_COLOR;
+            }
+            $all_rep_groups_data_asc[] = [
                 'id' => $group_post->ID,
                 'title' => get_the_title($group_post->ID),
+                'color' => $group_color // Add color to the array
             ];
         }
 
-        // Data for the "Areas Served" list view
-        $used_areas_served_terms_data = [];
+        // Create descending version for Rep Groups
+        $all_rep_groups_data_desc = $all_rep_groups_data_asc; // Copy asc
+        usort($all_rep_groups_data_desc, function($a, $b) {
+            // Ensure color is also part of the descending sort if primary sort is title
+            // However, since title is the primary sort key, color doesn't need to be explicitly in usort here
+            // unless we want a secondary sort by color, which is not requested.
+            return strcasecmp($b['title'], $a['title']); // Sort by title desc
+        });
+
+        // Data for the "Areas Served" list view (ascending by default)
+        $used_areas_served_terms_data_asc = []; // Renamed for clarity
         $rep_group_post_ids_for_terms = wp_list_pluck($all_rep_groups_posts, 'ID'); 
 
         if (!empty($rep_group_post_ids_for_terms)) {
             $terms_args = [
-                'orderby' => 'name',
-                'order'   => 'ASC',
-                'object_ids' => $rep_group_post_ids_for_terms // Ensure terms are associated with these posts
+                // orderby 'name' and order 'ASC' is implicit with wp_get_object_terms then custom sort
+                'object_ids' => $rep_group_post_ids_for_terms 
             ];
             $area_terms = wp_get_object_terms($rep_group_post_ids_for_terms, 'area-served', $terms_args);
             if (!is_wp_error($area_terms) && !empty($area_terms)) {
@@ -207,38 +220,67 @@ class Shortcode {
                             'id'   => $term->term_id,
                             'name' => $term->name,
                             'slug' => $term->slug,
-                            'svg_id' => $svg_id_meta ?: '' // Add svg_id, fallback to empty string if not set
+                            'svg_id' => $svg_id_meta ?: ''
                         ];
                     }
                 }
-                $used_areas_served_terms_data = array_values($unique_terms_by_id);
-                usort($used_areas_served_terms_data, function($a, $b) {
-                    return strcmp(strtolower($a['name']), strtolower($b['name']));
+                $used_areas_served_terms_data_asc = array_values($unique_terms_by_id);
+                // Ensure ascending sort by name (case-insensitive)
+                usort($used_areas_served_terms_data_asc, function($a, $b) {
+                    return strcasecmp($a['name'], $b['name']);
                 });
             }
         }
+
+        // Create descending version for Areas Served
+        $used_areas_served_terms_data_desc = $used_areas_served_terms_data_asc; // Copy asc
+        usort($used_areas_served_terms_data_desc, function($a, $b) {
+            return strcasecmp($b['name'], $a['name']); // Sort by name desc
+        });
         
-        // Generate HTML for the Rep Groups list using the partial
+        // Generate HTML for the Rep Groups list (Ascending)
         ob_start();
-        $template_vars_rep_groups = [
-            'rep_groups_data' => $all_rep_groups_data, // This is already an array of [id, title]
+        $template_vars_rep_groups_asc = [
+            'rep_groups_data' => $all_rep_groups_data_asc,
             'map_instance_id' => $map_instance_id,
         ];
-        extract($template_vars_rep_groups);
+        extract($template_vars_rep_groups_asc);
         include REP_GROUP_PATH . 'templates/frontend/partials/default-rep-groups-list.php';
-        $rep_groups_list_html = ob_get_clean();
+        $rep_groups_list_html_asc = ob_get_clean();
 
-        // Generate HTML for the Areas Served list using the partial
+        // Generate HTML for the Rep Groups list (Descending)
         ob_start();
-        $template_vars_areas_served = [
-            'terms_data' => $used_areas_served_terms_data, // Array of [id, name, slug, svg_id]
+        $template_vars_rep_groups_desc = [
+            'rep_groups_data' => $all_rep_groups_data_desc,
             'map_instance_id' => $map_instance_id,
-            'map_links_data' => $map_region_data, // Pass renamed variable
+        ];
+        extract($template_vars_rep_groups_desc);
+        include REP_GROUP_PATH . 'templates/frontend/partials/default-rep-groups-list.php';
+        $rep_groups_list_html_desc = ob_get_clean();
+
+        // Generate HTML for the Areas Served list (Ascending)
+        ob_start();
+        $template_vars_areas_served_asc = [
+            'terms_data' => $used_areas_served_terms_data_asc,
+            'map_instance_id' => $map_instance_id,
+            'map_links_data' => $map_region_data, 
             'default_region_color' => REP_GROUP_DEFAULT_REGION_COLOR,
         ];
-        extract($template_vars_areas_served);
+        extract($template_vars_areas_served_asc);
         include REP_GROUP_PATH . 'templates/frontend/partials/default-areas-served-list.php';
-        $areas_served_list_html = ob_get_clean();
+        $areas_served_list_html_asc = ob_get_clean();
+
+        // Generate HTML for the Areas Served list (Descending)
+        ob_start();
+        $template_vars_areas_served_desc = [
+            'terms_data' => $used_areas_served_terms_data_desc,
+            'map_instance_id' => $map_instance_id,
+            'map_links_data' => $map_region_data,
+            'default_region_color' => REP_GROUP_DEFAULT_REGION_COLOR,
+        ];
+        extract($template_vars_areas_served_desc);
+        include REP_GROUP_PATH . 'templates/frontend/partials/default-areas-served-list.php';
+        $areas_served_list_html_desc = ob_get_clean();
         
         wp_enqueue_style('rep-group-frontend-map', REP_GROUP_URL . 'assets/css/frontend.css', [], REP_GROUP_VERSION);
         wp_enqueue_script('rep-group-frontend-map-display', REP_GROUP_URL . 'assets/js/frontend-map-display.js', ['jquery', 'wp-util'], REP_GROUP_VERSION, true);
@@ -246,14 +288,17 @@ class Shortcode {
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('rep_map_nonce'), 
             'svg_url' => $svg_url, 
-            'map_links_data' => $map_region_data, // Use renamed variable
+            'map_links_data' => $map_region_data,
             'map_id' => esc_attr($map_instance_id),
             'default_region_color' => REP_GROUP_DEFAULT_REGION_COLOR,
-            'is_interactive' => $is_interactive,
-            'rep_groups_list_html' => $rep_groups_list_html, // NEW - Pre-rendered HTML
-            'areas_served_list_html' => $areas_served_list_html, // NEW - Pre-rendered HTML
-            'default_view_type' => 'rep_groups', 
+            'map_type_title' => $map_type === 'local' ? 'North American Reps' : 'International Reps', // Example title
+            'rep_groups_list_html_asc' => $rep_groups_list_html_asc,
+            'rep_groups_list_html_desc' => $rep_groups_list_html_desc,
+            'areas_served_list_html_asc' => $areas_served_list_html_asc,
+            'areas_served_list_html_desc' => $areas_served_list_html_desc,
         ]);
+
+        $svg_content = $this->get_svg_content_from_url($svg_url, $map_instance_id, $map_type);
 
         // Use output buffering to capture the main layout template output
         ob_start();
@@ -261,7 +306,6 @@ class Shortcode {
         if (file_exists($template_path)) {
             // Variables $map_instance_id, $map_type, $svg_url will be available in the template's scope.
             // The $svg_content for inline SVG is also prepared here.
-            $svg_content = $this->get_svg_content_from_url($svg_url, $map_instance_id, $map_type);
             include $template_path;
         } else {
             echo '<!-- Rep map layout template not found. -->';
