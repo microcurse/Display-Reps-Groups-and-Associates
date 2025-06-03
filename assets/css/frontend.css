@@ -155,7 +155,6 @@
 .rep-contact-info a {
     color: #0073aa;
     text-decoration: none;
-    transition: color 0.2s ease;
 }
 
 .rep-contact-info a:hover {
@@ -269,13 +268,12 @@
     max-width: 450px; 
     min-width: 300px; 
     height: 100%; 
-    overflow-y: hidden; /* Prevent this column itself from showing a scrollbar if children are managed */
+    overflow-y: hidden;
     display: flex; 
     flex-direction: column; 
-    background-color: var(--wp--preset--color--base, #ffffff);
+    background-color: var(--bg-color-main-content, #ffffff);
     box-sizing: border-box;
     padding: 15px;
-    /* Ensure children don't cause overflow if not handled by them directly */
     overflow: hidden; 
 }
 
@@ -284,23 +282,22 @@
     flex-grow: 1; 
     display: flex;
     flex-direction: column;
-    overflow-y: hidden; /* Primary scrolling will be handled by inner list containers or info-target */
+    overflow-y: hidden; 
     box-sizing: border-box;
-    position: relative; /* Or absolute/fixed depending on broader layout, but relative is often safest for components */
-    will-change: transform, opacity; /* Hint to browser for optimization */
-    width: 100%; /* Ensure panels take full width of info column */
+    position: relative; 
+    will-change: transform, opacity;
+    width: 100%;
     padding-top: 1em;
 }
 
-
 h3.rep-map-list-title {
     font-size: 1.2em;
+    color: var(--text-color, #444444);
 }
 
 .rep-map-list-container {
     flex-grow: 1;
-    overflow-y: auto; /* Enable scrolling for the list itself */
-    /* padding removed to be handled by parent or specific lists if needed */
+    overflow-y: auto;
 }
 
 .rep-map-list-container ul {
@@ -313,13 +310,12 @@ h3.rep-map-list-title {
     display: block;
     padding: var(--wp--preset--spacing--x-small, 1em) var(--wp--preset--spacing--small, 10px);
     text-decoration: none;
-    color: var(--wp--preset--color--contrast-4, #333);
-    border-bottom: 1px solid var(--wp--preset--color--contrast-2, #e0e0e0);
-    transition: background-color 0.15s ease;
+    color: var(--text-color, #444444);
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .rep-map-list-container li a:hover {
-    background-color: var(--wp--preset--color--contrast, #f0f0f0);
+    background-color: var(--link-bg, rgba(128, 128, 128, 0.1));
 }
 
 .rep-map-list-container li:last-child a {
@@ -332,27 +328,28 @@ h3.rep-map-list-title {
     height: 12px;
     border-radius: 50%;
     margin-right: 8px;
-    border: 1px solid rgba(0,0,0,0.1);
+    border: 1px solid var(--color-transparent-gray, rgba(0, 0, 0, 0.1));
     vertical-align: middle;
 }
 
 .rep-map-default-footer {
     padding-top: var(--wp--preset--spacing--small, 10px);
     font-size: 0.85em;
-    color: var(--wp--preset--color--contrast-4, #555);
-    border-top: 1px solid var(--wp--preset--color--contrast-2, #e0e0e0);
+    color: var(--text-color, #555555);
+    opacity: 0.7;
+    border-top: 1px solid var(--border-color, #e0e0e0);
 }
 
-.rep-group-info-target { /* This is inside .rep-map-details-content */
+.rep-group-info-target {
     flex-grow: 1;
-    overflow-y: auto; /* Allow details to scroll if they are long */
+    overflow-y: auto;
 }
 
 .rep-map-svg-column {
     flex-grow: 1; 
     height: 100%; 
     position: relative; 
-    background-color: var(--wp--preset--color--contrast, #f0f0f0); 
+    background-color: var(--bg-color, #f0f0f0);
     box-sizing: border-box;
 }
 
@@ -364,35 +361,34 @@ h3.rep-map-list-title {
     position: relative; 
 }
 
-
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .rep-group-map-interactive-area {
         flex-direction: column;
-        height: 86vh; /* Let content dictate, or set a larger vh for mobile full experience */
-        /* e.g., height: 85vh; if you want it to take most of mobile screen */
+        height: 86vh;
     }
 
     .rep-map-info-column,
     .rep-map-svg-column {
         width: 100%; 
-        border-right: none; /* Remove border when stacked */
+        border-right: none;
     }
 
     .rep-map-info-column {
-        height: 40vh; /* Example: 40% of viewport height for info */
-        max-height: 350px; /* Cap it */
-        overflow-y: hidden; /* Scroll handled by inner elements */
-        border-bottom: 1px solid var(--wp--preset--color--contrast-2, #e0e0e0);
+        height: 40vh;
+        max-height: 350px;
+        overflow-y: hidden;
+        border-bottom: 1px solid var(--border-color);
     }
 
     .rep-map-svg-column {
-        height: 50vh; /* Example: 50% for map */
+        height: 50vh;
     }
 }
 
-.rep-map-info-column p, .rep-map-info-column li {
-    color: var(--text-color);
+.rep-map-info-column p,
+.rep-map-info-column li {
+    color: var(--text-color, #444444);
     font-size: .95em;
     margin-bottom: 1em;
 }
@@ -418,7 +414,6 @@ h3.rep-map-list-title {
 .rep-group-info-target .rep-group-title-map + .area-context-map .area-name-highlighted {
     position: relative;
     display: inline-block;
-    /* padding-left: 15px; */ 
     background-color: transparent !important;
     text-decoration: underline;
 }
@@ -436,17 +431,17 @@ h3.rep-map-list-title {
 .rep-map-details-content .back-to-map-default {
     display: inline-block;
     background-color: transparent;
-    color: var(--link-color);
+    color: var(--link-color, #29317d);
     border: none;
     padding-bottom: 1rem;
     text-decoration: underline;
     cursor: pointer;
     font-family: var(--font-family-primary);
     font-size: var(--font-size-small);
-    transition: color var(--hover-transition);
 }
+
 .rep-map-details-content .back-to-map-default:hover {
-    color: var(--button-bg-hover);
+    color: var(--button-bg-hover, #404999);
     background-color: transparent;
 }
 
@@ -478,7 +473,8 @@ h3.rep-map-list-title {
 
 .rep-group-details-header .area-served-header {
     font-size: 1em;
-    color: #555;
+    color: var(--text-color, #555555);
+    opacity: 0.8;
     margin-bottom: 8px;
 }
 
@@ -495,8 +491,8 @@ h3.rep-map-list-title {
     margin-bottom: 10px;
     padding-bottom: 5px;
     padding-top: 16px;
-    color: var(--text-color);
-    font-family: var(--font-family-primary);
+    color: var(--text-color, #333333);
+    font-family: var(--font-family-primary, sans-serif);
 }
 
 .contact-item {
@@ -510,11 +506,12 @@ h3.rep-map-list-title {
     font-size: 1.3em; 
     margin-right: 10px;
     flex-shrink: 0; 
-    color: #6d747a;
+    color: var(--text-color, #6d747a);
+    opacity: 0.7;
 }
 
 .contact-item a {
-    color: #333;
+    color: var(--link-color, #29317d);
     text-decoration: none;
     word-break: break-word;
     line-height: 1.5; 
@@ -545,7 +542,7 @@ h3.rep-map-list-title {
 .address-details .contact-text {
     display: block; 
     line-height: 1.5;
-    color: #333; 
+    color: var(--text-color, #333333); 
     margin-right: 8px;
     flex-shrink: 0;
 }
@@ -555,6 +552,7 @@ h3.rep-map-list-title {
     margin-bottom: 8px; 
     padding-left: 10px; 
     border-left: 5px solid transparent;
+    color: var(--text-color, #666666);
 }
 
 .area-label {
@@ -572,7 +570,7 @@ h3.rep-map-list-title {
     margin-bottom: 1.2em;
     border: 0;
     height: 0px;
-    border-top: 2px dotted #e0e0e0;
+    border-top: 2px dotted var(--border-color, #e0e0e0);
     background-color: transparent;
 }
 
@@ -584,7 +582,8 @@ h3.rep-map-list-title {
     font-size: 0.8em;
     font-weight: bold;
     margin-bottom: 1em;
-    color: #999;
+    color: var(--text-color, #777777); 
+    opacity: 0.7;
     text-transform: uppercase;
 }
 
@@ -631,8 +630,7 @@ ion-icon {
 }
 
 .panel-active {
-    display: flex !important; /* Ensure it's visible and maintains flex properties */
-    /* If already display: flex from .rep-map-default-content, this is for emphasis/override if needed */
+    display: flex !important;
 }
 
 .panel-hidden {
@@ -647,17 +645,14 @@ ion-icon {
     animation: slideOutToLeft 0.25s forwards ease-in-out;
 }
 
-/* NEW STYLES FOR VIEW CONTROLS */
 .rep-map-view-controls {
     display: flex;
     align-items: center;
-    gap: 10px; /* Space between title, select, and button */
+    gap: 10px; 
     margin-bottom: 15px;
-    flex-wrap: wrap; /* Allow wrapping on small screens */
+    flex-wrap: wrap; 
 }
 
-/* .rep-map-view-by-title already has styles via .team-section-title, .rep-map-view-by-title */
-/* We only adjust its bottom margin if it's part of the flex container */
 .rep-map-view-controls .rep-map-view-by-title {
     margin-bottom: 0; 
     white-space: nowrap;
@@ -665,34 +660,39 @@ ion-icon {
 
 .view-by-select, 
 .sort-toggle-button {
-    padding: 8px 26px 8px 10px;
-    border: 1px solid var(--wp--preset--color--neutral-300, #ccc);
+    padding: 8px 10px;
+    border: 1px solid var(--border-color, #cccccc);
     border-radius: 4px;
-    background-color: var(--wp--preset--color--base, #fff);
-    color: var(--wp--preset--color--contrast, #333);
+    background-color: var(--bg-color-main-content, #ffffff);
+    color: var(--text-color, #333333);
     font-size: 0.9rem;
     cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.view-by-select {
+    padding-right: 26px;
 }
 
-.view-by-select:hover{
-    background-color: var(--wp--preset--color--neutral-100, #f5f5f5);
-    border-color: var(--wp--preset--color--neutral-400, #bbb);
+.view-by-select:hover,
+.sort-toggle-button:hover {
+    background-color: var(--link-bg, rgba(128, 128, 128, 0.1));
+    border-color: var(--color-primary, #29317d);
 }
 
 .view-by-select:focus,
 .sort-toggle-button:focus {
-    outline: 2px solid var(--wp--preset--color--primary, #0073aa);
+    outline: 2px solid var(--color-primary, #29317d);
     outline-offset: 1px;
+    border-color: var(--color-primary, #29317d);
 }
 
 .sort-toggle-button {
     display: inline-flex;
     align-items: center;
-    border: none;
+    border: 1px solid var(--border-color, #cccccc);
     padding: 8px;
 }
 
 .sort-toggle-button ion-icon {
-    font-size: 1.1em; /* Adjust icon size relative to text */
+    font-size: 1.1em;
+    color: var(--text-color, #333333);
 }
