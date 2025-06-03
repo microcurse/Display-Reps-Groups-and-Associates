@@ -100,14 +100,14 @@ class Import_Export {
         // Set headers
         $headers = [
             'Post ID', 'Rep Group Title', 'Rep Group Area Served (Taxonomy)', 
-            'Street Address', 'City', 'State', 'Zip Code', 'Country',
+            'Address 1', 'Address 2', 'City', 'State', 'Zip Code',
             'Associate User Email', 'Associate User Display Name', 
             'Associate Areas Served (for this group)', 
             'Associate Contact Email Override', 'Associate Contact Phone Override'
         ];
         $sheet->fromArray([$headers], NULL, 'A1');
 
-        // Get all rep groups
+        /** @var \WP_Post[] $rep_groups */
         $rep_groups = get_posts([
             'post_type' => 'rep-group',
             'posts_per_page' => -1,
@@ -127,7 +127,7 @@ class Import_Export {
             error_log('Rep groups fetched, but are not WP_Post objects. Aborting export.');
             wp_die('Unexpected data type for rep groups. Please check the logs.');
         }
-        
+
         $row = 2;
         foreach ($rep_groups as $rep_group) {
             if (!($rep_group instanceof \WP_Post)) {
@@ -146,12 +146,11 @@ class Import_Export {
             $area_served_display = implode(', ', $rep_group_area_served_names);
 
             $address_container = get_field('rg_address_container', $rep_group->ID);
-            $street_address = $address_container['rg_street_address'] ?? '';
+            $address_1 = $address_container['rg_address_1'] ?? '';
+            $address_2 = $address_container['rg_address_2'] ?? '';
             $city = $address_container['rg_city'] ?? '';
             $state = $address_container['rg_state'] ?? '';
             $zip_code = $address_container['rg_zip_code'] ?? '';
-            $country_data = $address_container['rg_country'] ?? [];
-            $country = is_array($country_data) && isset($country_data['label']) ? $country_data['label'] : ($country_data ?: '');
 
             if (have_rows('rep_associates', $rep_group->ID)) {
                 while (have_rows('rep_associates', $rep_group->ID)) {
@@ -198,11 +197,11 @@ class Import_Export {
                         $rep_group->ID,
                         $rep_group->post_title,
                         $area_served_display,
-                        $street_address,
+                        $address_1,
+                        $address_2,
                         $city,
                         $state,
                         $zip_code,
-                        $country,
                         $associate_user_email,
                         $associate_user_display_name,
                         $associate_territory_display,
@@ -218,11 +217,11 @@ class Import_Export {
                     $rep_group->ID,
                     $rep_group->post_title,
                     $area_served_display,
-                    $street_address,
+                    $address_1,
+                    $address_2,
                     $city,
                     $state,
                     $zip_code,
-                    $country,
                     '', // No associate user email
                     '', // No associate user display name
                     '', // No associate areas served

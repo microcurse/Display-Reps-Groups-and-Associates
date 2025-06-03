@@ -129,7 +129,6 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
 
     <?php // Team Members Section ?>
     <?php if ($team_members) : ?>
-        <hr class="team-divider">
         <div class="team-members-section">
             <h4 class="team-section-title">Team</h4>
             <?php foreach ($team_members as $associate) :
@@ -186,6 +185,7 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
                         </div>
                     <?php endif; ?>
                 </div>
+                <hr class="team-divider">
             <?php endforeach; ?>
         </div>
     <?php endif; ?>

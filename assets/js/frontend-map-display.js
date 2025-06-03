@@ -2,16 +2,35 @@
  * Frontend Map Display JavaScript
  */
 (function($) {
+  const mapInstanceStates = {}; // To store last active view type per map instance
+  let isPanelTransitioning = false; // Flag to prevent concurrent panel transitions
+
   function initRepMap(mapData) {
       const mapContainer = $('#' + mapData.map_id);
       if (!mapContainer.length) {
-          console.log('RepMap: Map container not found:', mapData.map_id);
           return;
       }
 
+      // --- Populate Default View ---
+      createToggleButtons(mapData, mapContainer);
+      updateColumnTitle(mapData, mapContainer, mapData.default_view_type); // Set initial column title
+      
+      mapInstanceStates[mapData.map_id] = { 
+          lastActiveDefaultView: mapData.default_view_type 
+      };
+
+      // Initial list display
+      if (mapData.default_view_type === 'rep_groups') {
+          // createRepGroupList(mapData, mapContainer);
+          mapContainer.find('.rep-map-list-container').html(mapData.rep_groups_list_html || '<li>Error loading Rep Groups list.</li>');
+      } else if (mapData.default_view_type === 'areas_served') {
+          // createAreasServedList(mapData, mapContainer);
+          mapContainer.find('.rep-map-list-container').html(mapData.areas_served_list_html || '<li>Error loading Areas Served list.</li>');
+      }
+      // --- End Populate Default View ---
+
       const svgElement = mapContainer.find('svg.rep-group-map-svg-object'); 
       if (!svgElement.length) {
-          console.log('RepMap: Inline SVG element (.rep-group-map-svg-object) not found in:', mapData.map_id);
           return;
       }
 
@@ -19,6 +38,62 @@
       if (mapData.is_interactive) {
           initPanZoomForMap(mapData.map_id, svgElement, panZoomGroup, mapData);
       }
+  }
+
+  // --- New: Functions to create HTML elements for default view ---
+  function createToggleButtons(mapData, mapContainer) {
+    const togglePlaceholder = mapContainer.find('.rep-map-default-toggle');
+    if (!togglePlaceholder.length) return;
+
+    const repGroupsButton = $('<button class="toggle-button" data-view="rep_groups" aria-pressed="false">Rep Groups</button>');
+    const areasServedButton = $('<button class="toggle-button" data-view="areas_served" aria-pressed="false">Areas Served</button>');
+
+    if (mapData.default_view_type === 'rep_groups') {
+        repGroupsButton.addClass('active').attr('aria-pressed', 'true');
+    } else {
+        areasServedButton.addClass('active').attr('aria-pressed', 'true');
+    }
+
+    repGroupsButton.on('click', function() {
+        $(this).addClass('active').attr('aria-pressed', 'true');
+        areasServedButton.removeClass('active').attr('aria-pressed', 'false');
+        mapInstanceStates[mapData.map_id].lastActiveDefaultView = 'rep_groups';
+        updateColumnTitle(mapData, mapContainer, 'rep_groups');
+        // createRepGroupList(mapData, mapContainer); 
+        mapContainer.find('.rep-map-list-container').html(mapData.rep_groups_list_html || '<li>Error loading Rep Groups list.</li>');
+    });
+
+    areasServedButton.on('click', function() {
+        $(this).addClass('active').attr('aria-pressed', 'true');
+        repGroupsButton.removeClass('active').attr('aria-pressed', 'false');
+        mapInstanceStates[mapData.map_id].lastActiveDefaultView = 'areas_served';
+        updateColumnTitle(mapData, mapContainer, 'areas_served');
+        // createAreasServedList(mapData, mapContainer);
+        mapContainer.find('.rep-map-list-container').html(mapData.areas_served_list_html || '<li>Error loading Areas Served list.</li>');
+    });
+
+    togglePlaceholder.empty().append(repGroupsButton).append(areasServedButton);
+  }
+
+  function updateColumnTitle(mapData, mapContainer, currentView) {
+    const columnTitleArea = mapContainer.find('.rep-map-column-title-area');
+    if (!columnTitleArea.length) return;
+
+    let titleText = '';
+    // Always set the title based on map type, regardless of currentView (rep_groups or areas_served)
+    if (mapData.map_id && mapData.map_id.includes('-local-')) {
+        titleText = "North American Reps";
+    } else if (mapData.map_id && mapData.map_id.includes('-international-')) {
+        titleText = "International Reps";
+    } else {
+        titleText = "Representatives"; // More generic fallback if needed
+    }
+
+    if (titleText) {
+        columnTitleArea.html('<h3 class="rep-map-list-title">' + titleText + '</h3>');
+    } else {
+        columnTitleArea.empty(); // Should not happen if map_id is always present
+    }
   }
 
   function applyFillToElementAndChildren(element, color) {
@@ -65,11 +140,11 @@
               const elId = el.attr('id');
 
               if (elId) {
-                  if (mapData.area_data && mapData.area_data[elId]) {
+                  if (mapData.map_links_data && mapData.map_links_data[elId]) {
                       processedRegionsCount++;
                       if (!firstProcessedId) firstProcessedId = elId;
 
-                      const areaInfo = mapData.area_data[elId];
+                      const areaInfo = mapData.map_links_data[elId];
                       const color = areaInfo.color || mapData.default_region_color;
                       applyFillToElementAndChildren(el, color);
                       el.addClass('mapped-region-frontend'); 
@@ -97,123 +172,141 @@
   }
   
   function displayRepInfoForArea(areaSlug, areaColor, mapInstanceId, nonce, ajaxUrl, defaultRegionColorParam) {
+      if (isPanelTransitioning) {
+          return;
+      }
+      isPanelTransitioning = true;
+
       const mapInteractiveArea = $('#' + mapInstanceId);
       const infoColumn = mapInteractiveArea.find('.rep-map-info-column');
       const defaultContent = infoColumn.find('.rep-map-default-content');
       const detailsContent = infoColumn.find('.rep-map-details-content');
       const infoTarget = detailsContent.find('.rep-group-info-target');
 
-      // Prepare for animation
-      infoTarget.html('<p><em>Loading rep group...</em></p>');
-
-      // If default is currently active, slide it out
-      if (defaultContent.hasClass('panel-active')) {
-          defaultContent.removeClass('panel-active').addClass('slide-out');
-          detailsContent.removeClass('panel-hidden').addClass('panel-active slide-in'); 
-      } else {
-          detailsContent.removeClass('panel-hidden').addClass('panel-active'); 
+      // Determine which panel is currently active to slide it out.
+      let panelToSlideOut;
+      if (detailsContent.hasClass('panel-active')) {
+          panelToSlideOut = detailsContent;
+      } else { // Assume defaultContent is active or should be the one sliding out
+          panelToSlideOut = defaultContent;
+          // If defaultContent is sliding out, its list needs to be cleared (if it wasn't already).
+          // This also helps prevent briefly seeing old list items if the panel somehow wasn't fully hidden or cleared before.
+          defaultContent.find('.rep-map-list-container').empty();
       }
       
-      infoColumn.scrollTop(0);
+      // Common preparation for detailsContent (which will eventually slide in with area info)
+      infoTarget.html('<p><em>Loading area information...</em></p>'); // Updated loading message
+      detailsContent.removeClass('has-left-border animate-border-in').css('--area-specific-color', '');
 
-      // Clear previous border color and class
-      detailsContent.removeClass('has-left-border').css('--area-specific-color', '');
+      // Ensure no previous animationend handlers are lingering from a rapid re-entry on the panel to slide out
+      panelToSlideOut.off('animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd');
+      panelToSlideOut.removeClass('panel-active').addClass('slide-out');
 
-      $.post(ajaxUrl, {
-          action: 'get_rep_group_info_for_area',
-          nonce: nonce,
-          area_slug: areaSlug,
-      }).done(function(response) {
-          if (response.success) {
-              infoTarget.html(response.data.html);
-              const effectiveColor = response.data.color || areaColor || defaultRegionColorParam;
-              if (effectiveColor) {
-                  detailsContent.addClass('has-left-border').css('--area-specific-color', effectiveColor);
-                  requestAnimationFrame(() => {
-                      detailsContent.addClass('animate-border-in');
-                  });
-              }
+      panelToSlideOut.one('animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd', function() {
+          $(this).removeClass('slide-out').addClass('panel-hidden');
 
-              // Re-apply fill to SVG if backend determined a specific color for the region
-              if (response.data.color && response.data.term_name) { 
-                  const svgObject = mapInteractiveArea.find('svg.rep-group-map-svg-object');
-                  if (svgObject.length && svgObject[0].contentDocument) {
-                      const svgDoc = svgObject[0].contentDocument;
-                      const clickedElement = $(svgDoc).find('#' + areaSlug);
-                      if (clickedElement.length) {
-                          applyFillToElementAndChildren(clickedElement, response.data.color);
-                      }
+          // AJAX call is made AFTER the outgoing panel is hidden
+          $.post(ajaxUrl, {
+              action: 'get_rep_group_info_for_area',
+              nonce: nonce,
+              area_slug: areaSlug,
+          }).done(function(response) {
+              if (response.success) {
+                  infoTarget.html(response.data.html);
+                  const effectiveColor = response.data.color || areaColor || defaultRegionColorParam;
+                  if (effectiveColor) {
+                      detailsContent.addClass('has-left-border').css('--area-specific-color', effectiveColor);
+                      requestAnimationFrame(() => {
+                          detailsContent.addClass('animate-border-in');
+                      });
                   }
+                  zoomToArea(mapInstanceId, areaSlug);
+              } else {
+                  infoTarget.html('<p class="error-message">' + (response.data.message || 'Could not load rep details.') + '</p>');
               }
-
-              // After successfully loading info, zoom to the area
-              zoomToArea(mapInstanceId, areaSlug); // areaSlug is the element ID
-          } else {
-              infoTarget.html('<p class="error-message">' + (response.data.message || 'Could not load rep details.') + '</p>');
-          }
-      }).fail(function() {
-          infoTarget.html('<p class="error-message">AJAX error loading rep details.</p>');
-      }).always(function() {
-          setTimeout(function() {
-              infoColumn.find('.slide-out').removeClass('slide-out').addClass('panel-hidden');
-              infoColumn.find('.slide-in').removeClass('slide-in');
-          }, 300);
+          }).fail(function() {
+              infoTarget.html('<p class="error-message">AJAX error loading rep details.</p>');
+          }).always(function() {
+              detailsContent.removeClass('panel-hidden').addClass('panel-active slide-in');
+              infoColumn.scrollTop(0);
+              // Ensure no previous animationend handlers are lingering on detailsContent from other operations
+              detailsContent.off('animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd');
+              detailsContent.one('animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd', function() {
+                  $(this).removeClass('slide-in');
+                  isPanelTransitioning = false; // Reset flag
+              });
+          });
       });
   }
 
   function displayRepGroupDetailsById(repGroupId, mapInstanceId, nonce, ajaxUrl) {
+      if (isPanelTransitioning) {
+          return;
+      }
+      isPanelTransitioning = true;
+
+      // Restore part of the original code
       const mapInteractiveArea = $('#' + mapInstanceId);
       const infoColumn = mapInteractiveArea.find('.rep-map-info-column');
       const defaultContent = infoColumn.find('.rep-map-default-content');
       const detailsContent = infoColumn.find('.rep-map-details-content');
       const infoTarget = detailsContent.find('.rep-group-info-target');
 
+      defaultContent.find('.rep-map-list-container').empty();
       infoTarget.html('<p><em>Loading Rep Group details...</em></p>');
+      detailsContent.removeClass('has-left-border animate-border-in').css('--area-specific-color', '');
 
-      if (defaultContent.hasClass('panel-active')) {
-          defaultContent.removeClass('panel-active').addClass('slide-out');
-          detailsContent.removeClass('panel-hidden').addClass('panel-active slide-in');
-      } else {
-          detailsContent.removeClass('panel-hidden').addClass('panel-active');
-      }
-      infoColumn.scrollTop(0);
 
-      // Clear previous border color and class
-      detailsContent.removeClass('has-left-border').css('--area-specific-color', '');
+      // Restore the animation trigger line
+      defaultContent.off('animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd'); // Keep this to be safe for when we restore .one()
+      defaultContent.removeClass('panel-active').addClass('slide-out');
 
-      $.post(ajaxUrl, {
-          action: 'get_rep_group_details_by_id',
-          nonce: nonce,
-          rep_group_id: repGroupId
-      }).done(function(response) {
-          if (response.success) {
-              infoTarget.html(response.data.html);
-              // Expect response.data.color to be sent from backend
-              if (response.data.color) { 
-                  detailsContent.addClass('has-left-border').css('--area-specific-color', response.data.color);
-                  requestAnimationFrame(() => {
-                      detailsContent.addClass('animate-border-in');
-                  });
+      // Restore the .one('animationend') handler but with an empty callback for now
+      defaultContent.one('animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd', function() {
+          $(this).removeClass('slide-out').addClass('panel-hidden');
+
+          // Restore the AJAX call, but with empty promise handlers for now
+          $.post(ajaxUrl, {
+              action: 'get_rep_group_details_by_id',
+              nonce: nonce,
+              rep_group_id: repGroupId
+          }).done(function(response) {
+              // Restore original .done() logic
+              if (response.success) {
+                  infoTarget.html(response.data.html);
+                  if (response.data.color) { 
+                      detailsContent.addClass('has-left-border').css('--area-specific-color', response.data.color);
+                      requestAnimationFrame(() => {
+                          detailsContent.addClass('animate-border-in');
+                      });
+                  } else {
+                      const mapData = window['RepMapData_' + mapInstanceId.replace(/-/g, '_')];
+                      const fallbackColor = mapData ? mapData.default_region_color : '#CCCCCC';
+                      detailsContent.addClass('has-left-border').css('--area-specific-color', fallbackColor);
+                      requestAnimationFrame(() => {
+                          detailsContent.addClass('animate-border-in');
+                      });
+                  }
               } else {
-                  // Fallback if color not provided by this specific endpoint response
-                  // This case might need a default color from mapData or a fixed fallback.
-                  const mapData = window['RepMapData_' + mapInstanceId.replace(/-/g, '_')];
-                  const fallbackColor = mapData ? mapData.default_region_color : '#CCCCCC';
-                  detailsContent.addClass('has-left-border').css('--area-specific-color', fallbackColor);
-                  requestAnimationFrame(() => {
-                      detailsContent.addClass('animate-border-in');
-                  });
+                  infoTarget.html('<p class="error-message">' + (response.data.message || 'Could not load Rep Group details.') + '</p>');
               }
-          } else {
-              infoTarget.html('<p class="error-message">' + (response.data.message || 'Could not load Rep Group details.') + '</p>');
-          }
-      }).fail(function() {
-          infoTarget.html('<p class="error-message">AJAX error loading Rep Group details.</p>');
-      }).always(function() {
-          setTimeout(function() {
-              infoColumn.find('.slide-out').removeClass('slide-out').addClass('panel-hidden');
-              infoColumn.find('.slide-in').removeClass('slide-in');
-          }, 300);
+          }).fail(function(jqXHR, textStatus, errorThrown) {
+              console.error('RepMap DEBUG: (RepGroup) AJAX .fail() - Restoring full logic. Status:', textStatus, 'Error:', errorThrown); // Keep this error for actual failures
+              // Restore original .fail() logic
+              infoTarget.html('<p class="error-message">AJAX error loading Rep Group details. Check console.</p>');
+          }).always(function() {
+              // Restore full original .always() logic
+              detailsContent.removeClass('panel-hidden').addClass('panel-active slide-in');
+              infoColumn.scrollTop(0);
+              
+              // Ensure no previous animationend handlers are lingering from a rapid re-entry on detailsContent too
+              detailsContent.off('animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd');
+              detailsContent.one('animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd', function() {
+                  $(this).removeClass('slide-in');
+                  isPanelTransitioning = false; // Reset flag
+              });
+          });
+
       });
   }
 
@@ -222,41 +315,125 @@
       // Click handler for the details panel close button (now "Back to Overview" link)
       $(document).on('click', '.rep-map-details-content .back-to-map-default', function(e) {
           e.preventDefault();
+
+          if (isPanelTransitioning) {
+              // console.log('RepMap DEBUG: Panel transition already in progress. Ignoring Back to Overview call.');
+              return;
+          }
+          isPanelTransitioning = true;
+          // console.log('RepMap DEBUG: Back to Overview clicked.');
+
           const mapInteractiveArea = $(this).closest('.rep-group-map-interactive-area');
+          const mapInstanceId = mapInteractiveArea.attr('id');
+          const mapData = window['RepMapData_' + mapInstanceId.replace(/-/g, '_')];
+          const currentMapState = mapInstanceStates[mapInstanceId];
+
           const infoColumn = mapInteractiveArea.find('.rep-map-info-column');
           const defaultContent = infoColumn.find('.rep-map-default-content');
           const detailsContent = infoColumn.find('.rep-map-details-content');
           
-          if (detailsContent.hasClass('panel-active')) {
-              detailsContent.removeClass('panel-active slide-out has-left-border animate-border-in').addClass('slide-out');
-              detailsContent.css('--area-specific-color', '');
-              defaultContent.removeClass('panel-hidden').addClass('panel-active slide-in');
-          }
-          
-          infoColumn.scrollTop(0);
+          restorePreviousZoom(mapInteractiveArea.attr('id'));
 
-          setTimeout(function() {
-              infoColumn.find('.slide-out').removeClass('slide-out').addClass('panel-hidden');
-              infoColumn.find('.slide-in').removeClass('slide-in');
-          }, 300);
+          // 1. Clear content of the outgoing panel (detailsContent) & reset its appearance
+          detailsContent.find('.rep-group-info-target').empty();
+          detailsContent.removeClass('has-left-border animate-border-in').css('--area-specific-color', '');
+
+          // 2. Start animation for outgoing panel (detailsContent)
+          detailsContent.removeClass('panel-active').addClass('slide-out');
+          
+          detailsContent.one('animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd', function() {
+              // 3. Outgoing animation ended: fully hide it and clean up
+              $(this).removeClass('slide-out').addClass('panel-hidden'); // Remove panel-active from previous step is implicit
+              
+              // 4. Now, prepare and animate in the incoming panel (defaultContent)
+              // Ensure defaultContent is ready to be shown (not panel-hidden) and make it active
+              defaultContent.removeClass('panel-hidden').addClass('panel-active');
+              
+              // Repopulate list. "View by" and toggles are static children of defaultContent and should appear
+              // when defaultContent becomes panel-active (assuming CSS is set up for this).
+              if (currentMapState && mapData) {
+                  // updateColumnTitle is mainly for the main title, which is persistent.
+                  // The "View By" and toggles are static HTML within defaultContent.
+                  // updateColumnTitle(mapData, mapInteractiveArea, currentMapState.lastActiveDefaultView);
+                  if (currentMapState.lastActiveDefaultView === 'rep_groups') {
+                      defaultContent.find('.rep-map-list-container').html(mapData.rep_groups_list_html || '<li>Error loading Rep Groups list.</li>');
+                  } else if (currentMapState.lastActiveDefaultView === 'areas_served') {
+                      defaultContent.find('.rep-map-list-container').html(mapData.areas_served_list_html || '<li>Error loading Areas Served list.</li>');
+                  }
+              }
+              infoColumn.scrollTop(0);
+
+              // 5. Add slide-in class to start the animation for defaultContent
+              defaultContent.addClass('slide-in');
+              defaultContent.one('animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd', function() {
+                  // console.log('RepMap DEBUG: defaultContent slide-in animation ended (Back to Overview).');
+                  $(this).removeClass('slide-in');
+                  isPanelTransitioning = false; // Reset flag
+              });
+          });
       });
 
       // New click handler for rep group list items in the default view
-      $(document).on('click', '.rep-map-default-content .rep-group-list-item-link', function(e) {
+      // This needs to be delegated now as the list is dynamically created
+      $(document).on('click', '.rep-map-list-container .rep-group-list-item-link', function(e) {
           e.preventDefault();
+          e.stopImmediatePropagation(); 
+
           const listItem = $(this).closest('li');
           const repGroupId = listItem.data('rep-group-id');
+          // console.log('RepMap DEBUG: .rep-group-list-item-link actual CLICK event. ID:', repGroupId, 'Target class:', $(e.target).attr('class'));
+
+          // Restore the call to displayRepGroupDetailsById
           const mapInteractiveArea = listItem.closest('.rep-group-map-interactive-area');
           const mapInstanceId = mapInteractiveArea.attr('id');
-          
-          // We need nonce and ajax_url, which are part of the localized RepMapData_ for this specific map instance
-          const mapData = window['RepMapData_' + mapInstanceId.replace(/-/g, '_')]; // map_instance_id has hyphens
+          const mapData = window['RepMapData_' + mapInstanceId.replace(/-/g, '_')]; 
           if (repGroupId && mapInstanceId && mapData && mapData.nonce && mapData.ajax_url) {
               displayRepGroupDetailsById(repGroupId, mapInstanceId, mapData.nonce, mapData.ajax_url);
           } else {
-              // Could not retrieve rep group ID or map data for AJAX call.
+              console.error('RepMap DEBUG: Could not retrieve rep group ID or map data for AJAX call from rep group list.', {repGroupId, mapInstanceId, mapData}); // Keep this error
           }
       });
+
+      // New click handler for areas served list items in the default view
+      $(document).on('click', '.rep-map-list-container .area-served-list-item-link', function(e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        const listItem = $(this).closest('li');
+        const svgId = listItem.data('svg-id');
+        const areaColor = listItem.data('area-color');
+        const mapInteractiveArea = listItem.closest('.rep-group-map-interactive-area');
+        const mapInstanceId = mapInteractiveArea.attr('id');
+        const mapData = window['RepMapData_' + mapInstanceId.replace(/-/g, '_')];
+        
+        const defaultContentContext = mapInteractiveArea.find('.rep-map-default-content'); 
+        const detailsContentContext = mapInteractiveArea.find('.rep-map-details-content');
+
+        if (!svgId) {
+            console.warn('RepMap: Clicked Area Served list item is missing data-svg-id. Cannot link to map region.', listItem);
+            const infoTarget = detailsContentContext.find('.rep-group-info-target');
+            if (infoTarget.length) {
+                // Transition to show error in details panel
+                defaultContentContext.find('.rep-map-list-container').empty();
+                defaultContentContext.removeClass('panel-active').addClass('slide-out');
+                defaultContentContext.one('animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd', function() {
+                    $(this).removeClass('slide-out').addClass('panel-hidden');
+                    infoTarget.html('<p class="error-message">This area is not directly linked to a map region. Please select a Rep Group or another area.</p>');
+                    detailsContentContext.removeClass('panel-hidden').addClass('panel-active slide-in');
+                    detailsContentContext.one('animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd', function(){
+                        $(this).removeClass('slide-in');
+                    });
+                });
+            }
+            return; 
+        }
+
+        if (svgId && mapInstanceId && mapData && mapData.nonce && mapData.ajax_url) {
+            displayRepInfoForArea(svgId, areaColor, mapInstanceId, mapData.nonce, mapData.ajax_url, mapData.default_region_color);
+        } else {
+            console.error('RepMap: Could not retrieve svgId or map data for AJAX call from areas served list.', {svgId, mapInstanceId, mapData}); // Keep this error
+        }
+    });
 
       for (const key in window) {
           if (window.hasOwnProperty(key) && key.startsWith('RepMapData_')) {
@@ -298,7 +475,6 @@
           handlePanMouseMove(e_move.originalEvent, state, mapInstanceId);
       });
       state.viewport.on('mouseup.panzoom.' + mapInstanceId + ', mouseleave.panzoom.' + mapInstanceId, function(e_up) {
-          // mouseleave is added to handle cases where mouse is released outside viewport
           handlePanMouseUp(e_up.originalEvent, state, mapInstanceId);
           state.viewport.off('.panzoom.' + mapInstanceId);
       });
@@ -336,15 +512,13 @@
           state.viewport.off('.panzoom.' + mapInstanceId);
       }
 
-      // Restore pointer events on the root SVG element
       if (state.svgRoot && state.svgRoot.length) {
           state.svgRoot.css('pointer-events', 'auto');
       }
 
-      const wasDragging = state.isDragging; // Capture before reset
+      const wasDragging = state.isDragging;
 
       state.isPanning = false;
-      // Reset dragging flag AFTER checking it, so click prevention logic works
       state.isDragging = false; 
 
       if (state.viewport) state.viewport.css('cursor', 'grab');
@@ -353,7 +527,6 @@
           event.preventDefault(); 
           event.stopImmediatePropagation(); 
       }
-      // If it wasn't a drag, the click on the SVG path (if any) should proceed normally.
   }
   
   function handleWheelZoom(event, state, mapInstanceId) {
@@ -443,7 +616,6 @@
           if (svgBox.width === 0 || svgBox.height === 0) {
               console.warn(`RepMap: SVG for ${mapId} has zero dimensions, skipping initial auto-zoom.`);
           } else {
-              // User wants initial scale around 1.25x of actual size
               let targetInitialScale = 1.25;
 
               // Clamp this desired scale to min/max limits
@@ -452,11 +624,6 @@
               // Calculate pan to center the SVG (using its bbox) with this new scale
               state.panX = (viewportWidth - svgBox.width * state.scale) / 2 + 200; // Added 200px offset to shift right
               state.panY = (viewportHeight - svgBox.height * state.scale) / 2 + 100; // Added 100px offset to shift down
-
-              // Ensure state.currentScale and state.currentPan are removed or not used,
-              // as state.scale, state.panX, state.panY are the source of truth.
-              // delete state.currentScale; // If these properties were ever added to the state object directly.
-              // delete state.currentPan;
 
               // Apply the transform using the updated state
               if (state.panZoomGroup && state.panZoomGroup.length) {
@@ -485,7 +652,6 @@
   function animateView(mapInstanceId, targetScale, targetPanX, targetPanY, duration = 350) {
     const state = mapStates[mapInstanceId];
     if (!state || !state.panZoomGroup || !state.panZoomGroup.length) {
-        // console.error("RepMap: Cannot animate, invalid state or panZoomGroup for map:", mapInstanceId);
         return;
     }
 
@@ -522,20 +688,17 @@
   function zoomToArea(mapInstanceId, areaElementId) {
     const state = mapStates[mapInstanceId];
     if (!state || !state.svgRoot || !state.viewport || !state.panZoomGroup) {
-        // console.error("RepMap: Cannot zoom to area, map state incomplete for:", mapInstanceId);
         return;
     }
 
     const clickedElement = state.svgRoot.find('#' + areaElementId);
     if (!clickedElement.length || typeof clickedElement[0].getBBox !== 'function') {
-        // console.error("RepMap: SVG element not found or not valid for BBox:", areaElementId);
         return;
     }
 
     requestAnimationFrame(() => { // Ensure BBox is accurate
         const elementBBox = clickedElement[0].getBBox();
         if (elementBBox.width === 0 || elementBBox.height === 0) {
-            // console.warn("RepMap: Clicked element has zero dimensions, cannot zoom:", areaElementId, elementBBox);
             return;
         }
 
@@ -576,7 +739,6 @@
     if (state.isZoomedToArea && state.previousScale !== null && typeof state.previousPanX === 'number' && typeof state.previousPanY === 'number') {
         animateView(mapInstanceId, state.previousScale, state.previousPanX, state.previousPanY);
         state.isZoomedToArea = false; 
-        // Keep previous values in case user clicks another area; they'll be overwritten if it's a new "first zoom"
     }
   }
 

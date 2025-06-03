@@ -62,21 +62,6 @@ class Shortcode {
     }
 
     /**
-     * Helper method to render address
-     */
-    // private function render_address($address) { ... } // REMOVED
-
-    /**
-     * Helper method to render rep associates
-     */
-    // private function render_rep_associates($post_id) { ... } // REMOVED
-
-    /**
-     * Helper method to render individual rep card
-     */
-    // private function render_rep_card($user_data, $email_override, $phone_override, $associate_specific_areas_text) { ... } // REMOVED
-
-    /**
      * Helper method to render rep contact info
      * Now accepts user_data and overrides
      */
@@ -154,34 +139,28 @@ class Shortcode {
 
         $map_instance_id = 'rep-map-instance-' . esc_attr($map_type) . '-' . wp_generate_uuid4();
         
-        // Get the default panel content using the already refactored method
-        $default_panel_content = $this->get_all_rep_groups_list_html($map_instance_id);
-
-        // Prepare data for frontend JavaScript (this logic remains the same)
-        $area_colors_and_terms = [];
-        $rep_groups_query_args = [
+        // Data for map links (area_data)
+        $map_region_data = []; // Renamed from $map_links_with_term_slugs
+        $rep_groups_query_args_for_map_links = [
             'post_type' => 'rep-group',
             'posts_per_page' => -1,
             'post_status' => 'publish',
         ];
-        $rep_groups = get_posts($rep_groups_query_args);
+        $rep_groups_for_map_links = get_posts($rep_groups_query_args_for_map_links);
 
-        foreach ($rep_groups as $rep_group) {
-            // Determine color with hierarchy: Term Meta > Rep Group Field > Default
+        foreach ($rep_groups_for_map_links as $rep_group) {
             $terms = get_the_terms($rep_group->ID, 'area-served');
             if ($terms && !is_wp_error($terms)) {
                 foreach ($terms as $term) {
                     $svg_id_meta = get_term_meta($term->term_id, '_rep_svg_target_id', true);
                     if (!empty($svg_id_meta)) {
-                        // Color source: Rep Group CPT field 'rep_group_map_color', then default.
                         $color = get_field('rep_group_map_color', $rep_group->ID);
                         if (empty($color)) {
                             $color = REP_GROUP_DEFAULT_REGION_COLOR;
                         }
-                        
                         $svg_id_key = ltrim($svg_id_meta, '#');
-                        $area_colors_and_terms[$svg_id_key] = [
-                            'color' => $color, // Corrected: Use $color directly
+                        $map_region_data[$svg_id_key] = [
+                            'color' => $color,
                             'term_id' => $term->term_id,
                             'term_name' => $term->name,
                             'term_slug' => $term->slug
@@ -190,25 +169,99 @@ class Shortcode {
                 }
             }
         }
+
+        // Data for the default "Rep Groups" list view
+        $all_rep_groups_data = [];
+        $all_rep_groups_query_args = [
+            'post_type' => 'rep-group',
+            'posts_per_page' => -1,
+            'post_status' => 'publish',
+            'orderby' => 'title',
+            'order' => 'ASC',
+        ];
+        $all_rep_groups_posts = get_posts($all_rep_groups_query_args);
+        foreach ($all_rep_groups_posts as $group_post) {
+            $all_rep_groups_data[] = [
+                'id' => $group_post->ID,
+                'title' => get_the_title($group_post->ID),
+            ];
+        }
+
+        // Data for the "Areas Served" list view
+        $used_areas_served_terms_data = [];
+        $rep_group_post_ids_for_terms = wp_list_pluck($all_rep_groups_posts, 'ID'); 
+
+        if (!empty($rep_group_post_ids_for_terms)) {
+            $terms_args = [
+                'orderby' => 'name',
+                'order'   => 'ASC',
+                'object_ids' => $rep_group_post_ids_for_terms // Ensure terms are associated with these posts
+            ];
+            $area_terms = wp_get_object_terms($rep_group_post_ids_for_terms, 'area-served', $terms_args);
+            if (!is_wp_error($area_terms) && !empty($area_terms)) {
+                $unique_terms_by_id = [];
+                foreach($area_terms as $term){
+                    if(!isset($unique_terms_by_id[$term->term_id])){ 
+                        $svg_id_meta = get_term_meta($term->term_id, '_rep_svg_target_id', true);
+                        $unique_terms_by_id[$term->term_id] = [
+                            'id'   => $term->term_id,
+                            'name' => $term->name,
+                            'slug' => $term->slug,
+                            'svg_id' => $svg_id_meta ?: '' // Add svg_id, fallback to empty string if not set
+                        ];
+                    }
+                }
+                $used_areas_served_terms_data = array_values($unique_terms_by_id);
+                usort($used_areas_served_terms_data, function($a, $b) {
+                    return strcmp(strtolower($a['name']), strtolower($b['name']));
+                });
+            }
+        }
+        
+        // Generate HTML for the Rep Groups list using the partial
+        ob_start();
+        $template_vars_rep_groups = [
+            'rep_groups_data' => $all_rep_groups_data, // This is already an array of [id, title]
+            'map_instance_id' => $map_instance_id,
+        ];
+        extract($template_vars_rep_groups);
+        include REP_GROUP_PATH . 'templates/frontend/partials/default-rep-groups-list.php';
+        $rep_groups_list_html = ob_get_clean();
+
+        // Generate HTML for the Areas Served list using the partial
+        ob_start();
+        $template_vars_areas_served = [
+            'terms_data' => $used_areas_served_terms_data, // Array of [id, name, slug, svg_id]
+            'map_instance_id' => $map_instance_id,
+            'map_links_data' => $map_region_data, // Pass renamed variable
+            'default_region_color' => REP_GROUP_DEFAULT_REGION_COLOR,
+        ];
+        extract($template_vars_areas_served);
+        include REP_GROUP_PATH . 'templates/frontend/partials/default-areas-served-list.php';
+        $areas_served_list_html = ob_get_clean();
         
         wp_enqueue_style('rep-group-frontend-map', REP_GROUP_URL . 'assets/css/frontend.css', [], REP_GROUP_VERSION);
-        wp_enqueue_script('rep-group-frontend-map', REP_GROUP_URL . 'assets/js/frontend-map-display.js', ['jquery', 'wp-util'], REP_GROUP_VERSION, true);
-        wp_localize_script('rep-group-frontend-map', 'RepMapData_' . str_replace('-', '_', $map_instance_id), [
+        wp_enqueue_script('rep-group-frontend-map-display', REP_GROUP_URL . 'assets/js/frontend-map-display.js', ['jquery', 'wp-util'], REP_GROUP_VERSION, true);
+        wp_localize_script('rep-group-frontend-map-display', 'RepMapData_' . str_replace('-', '_', $map_instance_id), [
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('rep_map_nonce'),
-            'svg_url' => $svg_url,
-            'area_data' => $area_colors_and_terms, 
+            'nonce' => wp_create_nonce('rep_map_nonce'), 
+            'svg_url' => $svg_url, 
+            'map_links_data' => $map_region_data, // Use renamed variable
             'map_id' => esc_attr($map_instance_id),
             'default_region_color' => REP_GROUP_DEFAULT_REGION_COLOR,
             'is_interactive' => $is_interactive,
+            'rep_groups_list_html' => $rep_groups_list_html, // NEW - Pre-rendered HTML
+            'areas_served_list_html' => $areas_served_list_html, // NEW - Pre-rendered HTML
+            'default_view_type' => 'rep_groups', 
         ]);
 
-        // Use output buffering to capture the template output
+        // Use output buffering to capture the main layout template output
         ob_start();
         $template_path = REP_GROUP_PATH . 'templates/frontend/interactive-map-layout.php';
         if (file_exists($template_path)) {
-            // Variables $map_instance_id, $map_type, $svg_url, $default_panel_content 
-            // will be available in the template's scope.
+            // Variables $map_instance_id, $map_type, $svg_url will be available in the template's scope.
+            // The $svg_content for inline SVG is also prepared here.
+            $svg_content = $this->get_svg_content_from_url($svg_url, $map_instance_id, $map_type);
             include $template_path;
         } else {
             echo '<!-- Rep map layout template not found. -->';
@@ -384,28 +437,64 @@ class Shortcode {
      * Generates HTML list of all rep groups for the default panel in map view.
      * Includes data attributes for AJAX loading.
      */
-    private function get_all_rep_groups_list_html($map_instance_id) {
-        $rep_groups_query_args = [
-            'post_type' => 'rep-group',
-            'posts_per_page' => -1,
-            'post_status' => 'publish',
-            'orderby' => 'title',
-            'order' => 'ASC',
-        ];
-        $all_rep_groups = get_posts($rep_groups_query_args);
+    // private function get_all_rep_groups_list_html($map_instance_id) { ... } // REMOVED as JS will handle this
 
-        ob_start();
-        
-        // Variables $all_rep_groups and $map_instance_id will be available in the template scope.
-        $template_path = REP_GROUP_PATH . 'templates/frontend/partials/all-rep-groups-list.php';
-
-        if (file_exists($template_path)) {
-            include $template_path;
-        } else {
-            echo '<li>Error: All rep groups list template not found.</li>'; // Fallback
+    private function get_svg_content_from_url($url, $map_instance_id, $map_type) {
+        if (empty($url)) {
+            return '<!-- Rep Map: SVG URL not provided to get_svg_content_from_url. -->';
         }
-        
-        return ob_get_clean();
+
+        $svg_content_raw = '';
+        // Try to get path from URL if it's a local file
+        $svg_path = str_replace(content_url(), WP_CONTENT_DIR, $url);
+
+        if (filter_var($url, FILTER_VALIDATE_URL) && strpos($svg_path, WP_CONTENT_DIR) !== 0) {
+            // It's a remote URL, or a local URL not in WP_CONTENT_DIR (less common for theme/plugin assets)
+            if (ini_get('allow_url_fopen')) {
+                $context = stream_context_create(["ssl" => ["verify_peer" => false, "verify_peer_name" => false]]);
+                $svg_content_raw = @file_get_contents($url, false, $context);
+            } else {
+                error_log('[RepGroup Plugin] Cannot fetch remote SVG: allow_url_fopen is disabled. URL: ' . $url);
+                return '<!-- Rep Map: allow_url_fopen is disabled, cannot fetch remote SVG. -->';
+            }
+        } elseif (file_exists($svg_path)) {
+            // It's a local file path within the WordPress installation
+            $svg_content_raw = @file_get_contents($svg_path);
+        } else {
+            error_log('[RepGroup Plugin] SVG file not found at path: ' . $svg_path . ' (derived from URL: ' . $url . ')');
+            return '<!-- Rep Map: SVG file not found at path: ' . esc_html($svg_path) . ' -->';
+        }
+
+        if (empty($svg_content_raw)) {
+            error_log('[RepGroup Plugin] Failed to retrieve SVG content from URL/path: ' . $url);
+            return '<!-- Rep Map: Unable to load SVG content from ' . esc_html($url) . ' -->';
+        }
+
+        // Clean and modify SVG content
+        $trimmed_content = trim($svg_content_raw);
+        $content_to_check = preg_replace('/^<\?xml[^>]*\?>\s*/is', '', $trimmed_content);
+        $content_to_check = preg_replace('/^<!DOCTYPE[^>]*>\s*/is', '', $content_to_check); // Also remove DOCTYPE
+        $content_to_check = preg_replace('/^<!--.*?-->\s*/is', '', $content_to_check);
+        $content_to_check = preg_replace('/^<!--.*?-->\s*/is', '', $content_to_check); // Second pass for adjacent comments
+        $content_to_check = trim($content_to_check);
+
+        if (stripos($content_to_check, '<svg') === 0) {
+            // Use map_instance_id for the main SVG element ID to ensure uniqueness if multiple maps are on a page
+            // The JS finds it by class anyway, but unique IDs are good practice.
+            $svg_id_attr = 'svg-object-' . esc_attr($map_instance_id); 
+            $svg_class_attr = 'rep-group-map-svg-object';
+            
+            $modified_svg = preg_replace(
+                '/<svg/',
+                sprintf('<svg id="%s" class="%s"', esc_attr($svg_id_attr), esc_attr($svg_class_attr)),
+                $trimmed_content, // Use $trimmed_content which has prefixes, apply to the first <svg>
+                1
+            );
+            return $modified_svg;
+        } else {
+            error_log('[RepGroup Plugin] Loaded content does not appear to be a valid SVG. URL: ' . $url);
+            return '<!-- Rep Map: Loaded content is not a valid SVG or has unexpected prefixes. URL: ' . esc_html($url) . ' -->';
+        }
     }
 
 } // End Class

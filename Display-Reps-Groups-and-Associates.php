@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Display Rep Groups and Associates
  * Description: A plugin to display Rep Group information.
- * Version: 2.0.1
+ * Version: 2.0.2
  * Author: Marc Maninang
  * Plugin URI: https://github.com/microcurse/Display-Reps-Groups-and-Associates
  * GitHub Plugin URI: https://github.com/microcurse/Display-Reps-Groups-and-Associates
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('REP_GROUP_VERSION', '2.0.1');
+define('REP_GROUP_VERSION', '2.0.2');
 define('REP_GROUP_PATH', plugin_dir_path(__FILE__));
 define('REP_GROUP_URL', plugin_dir_url(__FILE__));
 define('REP_GROUP_DEFAULT_REGION_COLOR', '#CCCCCC');
