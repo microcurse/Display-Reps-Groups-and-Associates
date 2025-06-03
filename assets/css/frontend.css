@@ -329,7 +329,7 @@ h3.rep-map-list-title {
 
 .rep-map-list-container li a {
     display: block;
-    padding: var(--wp--preset--spacing--x-small, 5px) var(--wp--preset--spacing--small, 10px);
+    padding: var(--wp--preset--spacing--x-small, 1em) var(--wp--preset--spacing--small, 10px);
     text-decoration: none;
     color: var(--wp--preset--color--contrast-4, #333);
     border-bottom: 1px solid var(--wp--preset--color--contrast-2, #e0e0e0);
@@ -387,7 +387,7 @@ h3.rep-map-list-title {
 @media (max-width: 768px) {
     .rep-group-map-interactive-area {
         flex-direction: column;
-        height: auto; /* Let content dictate, or set a larger vh for mobile full experience */
+        height: 86vh; /* Let content dictate, or set a larger vh for mobile full experience */
         /* e.g., height: 85vh; if you want it to take most of mobile screen */
     }
 
@@ -409,13 +409,14 @@ h3.rep-map-list-title {
     }
 }
 
-
-/* ... (Keep existing styles for .panel-active, .panel-hidden, animations, etc.) ... */
-
-
 .rep-map-info-column p, .rep-map-info-column li {
     color: var(--text-color);
     font-size: var(--font-size-medium);
+    margin-bottom: 1em;
+}
+
+.rep-map-info-column li {
+    margin-bottom: 0;
 }
 
 .rep-group-info-target .rep-group-item {
@@ -596,7 +597,7 @@ h3.rep-map-list-title {
     margin-top: 1em;
 }
 
-.team-section-title {
+.team-section-title, .rep-map-view-by-title {
     font-size: 0.8em;
     font-weight: bold;
     margin-bottom: 1em;

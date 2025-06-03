@@ -131,7 +131,12 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
     <?php if ($team_members) : ?>
         <div class="team-members-section">
             <h4 class="team-section-title">Team</h4>
+            <?php
+            $total_associates = count($team_members);
+            $current_associate_index = 0;
+            ?>
             <?php foreach ($team_members as $associate) :
+                $current_associate_index++;
                 $user_id = $associate['rep_user'];
                 if (!$user_id) continue;
 
@@ -139,6 +144,7 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
                 if (!$user_info) continue;
 
                 $associate_name = esc_html($user_info->display_name);
+                $associate_title = get_field('rep_title', 'user_' . $user_id);
                 $associate_areas_served = esc_html($associate['rep_specific_areas_text']);
                 
                 // Email: Override from repeater, then user profile, then empty.
@@ -160,6 +166,9 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
             ?>
                 <div class="rep-associate-item">
                     <h5 class="rep-associate-name"><?php echo $associate_name; ?></h5>
+                    <?php if (!empty($associate_title)) : ?>
+                        <p class="rep-associate-title"><?php echo esc_html($associate_title); ?></p>
+                    <?php endif; ?>
                     <?php if (!empty($associate_areas_served)) : ?>
                         <div class="area-served-info rep-associate-areas-served">
                             <span class="area-label">Area Served:</span>
@@ -169,7 +178,7 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
                     <?php if ($associate_phone) : ?>
                         <div class="contact-item rep-associate-contact-item phone-details">
                             <ion-icon name="call" aria-hidden="true"></ion-icon>
-                            <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $associate_phone)); ?>" 
+                            <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/g', '', $associate_phone)); ?>" 
                                aria-label="Call <?php echo $associate_name; ?> at <?php echo $associate_phone; ?>">
                                 <span class="contact-text-hidden">Phone: </span><?php echo $associate_phone; ?>
                             </a>
@@ -185,7 +194,12 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
                         </div>
                     <?php endif; ?>
                 </div>
+                <?php 
+                // Add a divider if there are multiple associates and this is not the last one
+                if ($total_associates > 1 && $current_associate_index < $total_associates) :
+                ?>
                 <hr class="team-divider">
+                <?php endif; ?>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>

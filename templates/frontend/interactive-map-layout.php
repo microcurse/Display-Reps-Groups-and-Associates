@@ -18,9 +18,9 @@ if (empty($map_instance_id) || empty($map_type) || !isset($svg_content)) { // sv
     <div class="rep-map-info-column">
         <div class="rep-map-column-title-area"></div>
         <div class="rep-map-default-content panel-active">
-            <div class="rep-map-view-by-title">
-                <h4>View by:</h4>
-            </div>
+            <h4 class="rep-map-view-by-title">
+                <span>View by:</span>
+            </h4>   
             <div class="rep-map-default-toggle">
                 <!-- Toggle buttons will be injected here by JS -->
             </div>
