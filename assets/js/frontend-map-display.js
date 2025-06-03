@@ -145,6 +145,9 @@
                       }
                   }
               }
+
+              // After successfully loading info, zoom to the area
+              zoomToArea(mapInstanceId, areaSlug); // areaSlug is the element ID
           } else {
               infoTarget.html('<p class="error-message">' + (response.data.message || 'Could not load rep details.') + '</p>');
           }
@@ -413,7 +416,12 @@
           viewport: viewport,
           minScale: 0.5, 
           maxScale: 5,   
-          zoomFactor: 1.1 
+          zoomFactor: 1.1,
+          // New properties for zoom-to-area
+          previousScale: null,
+          previousPanX: null,
+          previousPanY: null,
+          isZoomedToArea: false
       };
 
       const state = mapStates[mapInstanceId];
@@ -473,5 +481,108 @@
       });
   }
   // --- End of New Pan and Zoom Functionality ---
+
+  // --- Animation Helper ---
+  function easeInOutQuad(t) {
+    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  }
+
+  function animateView(mapInstanceId, targetScale, targetPanX, targetPanY, duration = 350) {
+    const state = mapStates[mapInstanceId];
+    if (!state || !state.panZoomGroup || !state.panZoomGroup.length) {
+        // console.error("RepMap: Cannot animate, invalid state or panZoomGroup for map:", mapInstanceId);
+        return;
+    }
+
+    const startScale = state.scale;
+    const startPanX = state.panX;
+    const startPanY = state.panY;
+    const startTime = performance.now();
+
+    function animationStep(currentTime) {
+        const elapsedTime = currentTime - startTime;
+        const progress = Math.min(elapsedTime / duration, 1);
+        const easedProgress = easeInOutQuad(progress);
+
+        state.scale = startScale + (targetScale - startScale) * easedProgress;
+        state.panX = startPanX + (targetPanX - startPanX) * easedProgress;
+        state.panY = startPanY + (targetPanY - startPanY) * easedProgress;
+        
+        applyTransform(state);
+
+        if (progress < 1) {
+            requestAnimationFrame(animationStep);
+        } else {
+            // Ensure final state is set precisely
+            state.scale = targetScale;
+            state.panX = targetPanX;
+            state.panY = targetPanY;
+            applyTransform(state);
+        }
+    }
+    requestAnimationFrame(animationStep);
+  }
+
+  // --- Zoom to Area and Restore ---
+  function zoomToArea(mapInstanceId, areaElementId) {
+    const state = mapStates[mapInstanceId];
+    if (!state || !state.svgRoot || !state.viewport || !state.panZoomGroup) {
+        // console.error("RepMap: Cannot zoom to area, map state incomplete for:", mapInstanceId);
+        return;
+    }
+
+    const clickedElement = state.svgRoot.find('#' + areaElementId);
+    if (!clickedElement.length || typeof clickedElement[0].getBBox !== 'function') {
+        // console.error("RepMap: SVG element not found or not valid for BBox:", areaElementId);
+        return;
+    }
+
+    requestAnimationFrame(() => { // Ensure BBox is accurate
+        const elementBBox = clickedElement[0].getBBox();
+        if (elementBBox.width === 0 || elementBBox.height === 0) {
+            // console.warn("RepMap: Clicked element has zero dimensions, cannot zoom:", areaElementId, elementBBox);
+            return;
+        }
+
+        const viewportWidth = state.viewport.width();
+        const viewportHeight = state.viewport.height();
+
+        const zoomPaddingFactor = 0.8; // e.g., 80% of viewport
+        let targetScaleX = (viewportWidth * zoomPaddingFactor) / elementBBox.width;
+        let targetScaleY = (viewportHeight * zoomPaddingFactor) / elementBBox.height;
+        let targetScale = Math.min(targetScaleX, targetScaleY);
+
+        targetScale = Math.max(state.minScale, Math.min(state.maxScale, targetScale));
+
+        // Calculate pan to center the element
+        // Element's center in its own coordinate system (relative to svgRoot's <g> content)
+        const elementCenterX = elementBBox.x + elementBBox.width / 2;
+        const elementCenterY = elementBBox.y + elementBBox.height / 2;
+        
+        // Target pan for the panZoomGroup
+        let targetPanX = (viewportWidth / 2) - (elementCenterX * targetScale);
+        let targetPanY = (viewportHeight / 2) - (elementCenterY * targetScale);
+        
+        if (!state.isZoomedToArea) { // Only store if not already zoomed (i.e., this is the first area zoom)
+            state.previousScale = state.scale;
+            state.previousPanX = state.panX;
+            state.previousPanY = state.panY;
+        }
+        state.isZoomedToArea = true;
+
+        animateView(mapInstanceId, targetScale, targetPanX, targetPanY);
+    });
+  }
+
+  function restorePreviousZoom(mapInstanceId) {
+    const state = mapStates[mapInstanceId];
+    if (!state) return;
+
+    if (state.isZoomedToArea && state.previousScale !== null && typeof state.previousPanX === 'number' && typeof state.previousPanY === 'number') {
+        animateView(mapInstanceId, state.previousScale, state.previousPanX, state.previousPanY);
+        state.isZoomedToArea = false; 
+        // Keep previous values in case user clicks another area; they'll be overwritten if it's a new "first zoom"
+    }
+  }
 
 })(jQuery); 

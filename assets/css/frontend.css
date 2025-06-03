@@ -633,7 +633,8 @@
     margin-bottom: 20px;
     border: 0;
     height: 0px;
-    border-top: 1px solid #e0e0e0;
+    border-top: 2px dotted #e0e0e0;
+    background-color: transparent;
 }
 
 .team-members-section {
