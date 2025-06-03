@@ -443,29 +443,24 @@
           if (svgBox.width === 0 || svgBox.height === 0) {
               console.warn(`RepMap: SVG for ${mapId} has zero dimensions, skipping initial auto-zoom.`);
           } else {
-              const viewportAspect = viewportWidth / viewportHeight;
-              const svgAspect = svgBox.width / svgBox.height;
-              let scale, panX = 0, panY = 0;
+              // User wants initial scale around 1.25x of actual size
+              let targetInitialScale = 1.25;
 
-              if (viewportAspect > svgAspect) { // Viewport is wider than SVG, fit to height
-                  scale = viewportHeight / svgBox.height;
-                  panX = (viewportWidth - svgBox.width * scale) / 2;
-                  // Removed console.log for fitting to height
-              } else { // Viewport is taller than SVG (or same aspect), fit to width
-                  scale = viewportWidth / svgBox.width;
-                  panY = (viewportHeight - svgBox.height * scale) / 2;
-                  // Removed console.log for fitting to width
-              }
+              // Clamp this desired scale to min/max limits
+              state.scale = Math.max(state.minScale, Math.min(state.maxScale, targetInitialScale));
 
-              // Ensure scale is not excessively large or small, adjust as needed
-              scale = Math.max(state.minScale, Math.min(state.maxScale, scale));
+              // Calculate pan to center the SVG (using its bbox) with this new scale
+              state.panX = (viewportWidth - svgBox.width * state.scale) / 2 + 200; // Added 200px offset to shift right
+              state.panY = (viewportHeight - svgBox.height * state.scale) / 2 + 100; // Added 100px offset to shift down
 
-              mapStates[mapId].currentScale = scale;
-              mapStates[mapId].currentPan = { x: panX, y: panY };
+              // Ensure state.currentScale and state.currentPan are removed or not used,
+              // as state.scale, state.panX, state.panY are the source of truth.
+              // delete state.currentScale; // If these properties were ever added to the state object directly.
+              // delete state.currentPan;
 
-              // Removed console.log for Applying initial transform
+              // Apply the transform using the updated state
               if (state.panZoomGroup && state.panZoomGroup.length) {
-                  state.panZoomGroup.attr('transform', `translate(${panX} ${panY}) scale(${scale})`);
+                  applyTransform(state);
               } else {
                   console.warn(`RepMap (rAF): panZoomGroup not found in state for ${mapId} when trying to apply initial transform.`);
               }
