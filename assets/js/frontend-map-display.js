@@ -36,7 +36,7 @@
 
       // Update sort button icon to initial state (A-Z, arrow-down)
       const sortButton = mapContainer.find('.sort-toggle-button');
-      sortButton.find('ion-icon').attr('name', 'arrow-down-outline');
+      sortButton.find('ion-icon').attr('name', 'arrow-down');
   }
 
   function updateColumnTitle(mapData, mapContainer) {
@@ -92,8 +92,7 @@
 
         sortButton.data('sort-order', newOrder);
         sortButton.attr('aria-label', newOrder === 'asc' ? 'Sort Ascending' : 'Sort Descending');
-        sortButton.find('.sort-text').text(newOrder === 'asc' ? 'A-Z' : 'Z-A');
-        sortButton.find('ion-icon').attr('name', newOrder === 'asc' ? 'arrow-down-outline' : 'arrow-up-outline');
+        sortButton.find('ion-icon').attr('name', newOrder === 'asc' ? 'arrow-down' : 'arrow-up');
         
         updateDefaultListView(mapData, mapContainer);
     });

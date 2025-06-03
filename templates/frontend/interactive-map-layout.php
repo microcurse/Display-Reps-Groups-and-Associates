@@ -27,8 +27,8 @@ if (empty($map_instance_id) || empty($map_type) || !isset($svg_content)) { // sv
                     <option value="areas_served">Areas Served</option>
                 </select>
                 <button class="sort-toggle-button" data-sort-order="asc" aria-label="Sort Ascending">
-                    <span class="sort-text">A-Z</span>
-                    <!-- Example: <ion-icon name="arrow-down-a-z"></ion-icon> -->
+                    <span class="sort-text"></span>
+                    <ion-icon name="arrow-down"></ion-icon>
                 </button>
             </div>
             <div class="rep-map-list-container">
