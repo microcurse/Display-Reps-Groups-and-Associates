@@ -14,6 +14,38 @@ class Asset_Manager {
         }
 
         wp_enqueue_style('rep-group-admin', REP_GROUP_URL . 'assets/css/admin.css', [], REP_GROUP_VERSION);
+
+        // Get current screen
+        $screen = get_current_screen();
+
+        // Enqueue scripts only on specific admin pages
+        // Example: For the Rep Group CPT edit screen or your plugin's settings page
+        if ($screen) {
+            if ($screen->post_type === 'rep-group' || strpos($screen->id, 'rep-group-map-settings') !== false) {
+                // Enqueue scripts specific to your plugin's admin pages
+                // wp_enqueue_script('my-plugin-admin-script', REP_GROUP_URL . 'assets/js/admin.js', ['jquery'], REP_GROUP_VERSION, true);
+            }
+
+            // Enqueue the new taxonomy quick edit script only on the 'area-served' term list table page
+            if ($screen->base === 'edit-tags' && $screen->taxonomy === 'area-served') {
+                wp_enqueue_script(
+                    'rep-group-admin-taxonomy-quick-edit',
+                    REP_GROUP_URL . 'assets/js/admin-taxonomy-quick-edit.js',
+                    ['jquery', 'inline-edit-tax'], // Dependencies: jQuery and WordPress's inline-edit-tax script
+                    REP_GROUP_VERSION,
+                    true // Load in footer
+                );
+            }
+        }
+
+        // Enqueue color picker for taxonomy edit screens if needed
+        if ( (isset($_GET['taxonomy']) && $_GET['taxonomy'] == 'area-served') || 
+             (isset($_GET['post_type']) && $_GET['post_type'] == 'rep-group') || 
+             (strpos($hook, 'rep-group-map-settings') !== false) ) {
+            // WordPress Color Picker
+            // wp_enqueue_style( 'wp-color-picker' ); // Already enqueued by ACF Pro if it's an ACF color field.
+            // wp_enqueue_script( 'wp-color-picker-alpha', REP_GROUP_URL . 'assets/js/wp-color-picker-alpha.min.js', ['wp-color-picker'], REP_GROUP_VERSION, true );
+        }
     }
 
     private function is_plugin_admin_page($hook_suffix) { // hook_suffix is $hook passed to admin_enqueue_scripts
