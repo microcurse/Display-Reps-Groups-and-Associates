@@ -82,22 +82,135 @@ $rg_website = get_field('rg_website', $post_id);
         </div>
     <?php endif; ?>
 
+    <?php
+    // Satellite Offices
+    if (have_rows('satellite_offices', $post_id)) :
+        while (have_rows('satellite_offices', $post_id)) : the_row();
+            $office_name = get_sub_field('office_name');
+            $address = get_sub_field('office_address');
+            $phones = get_sub_field('office_phone_numbers');
+            ?>
+            <div class="satellite-office">
+                <?php if ($office_name) : ?>
+                    <h4><?php echo esc_html($office_name); ?></h4>
+                <?php endif; ?>
+
+                <?php if ($address && is_array($address)) : ?>
+                    <div class="address">
+                        <strong>Address:</strong>
+                        <div class="address-content">
+                            <?php if (!empty($address['address_1'])) : ?>
+                                <p><?php echo esc_html($address['address_1']); ?></p>
+                            <?php endif; ?>
+                            <?php if (!empty($address['address_2'])) : ?>
+                                <p><?php echo esc_html($address['address_2']); ?></p>
+                            <?php endif; ?>
+                            <?php
+                            $city_state_zip_parts = [];
+                            if (!empty($address['city'])) $city_state_zip_parts[] = esc_html($address['city']);
+                            if (!empty($address['state'])) $city_state_zip_parts[] = esc_html($address['state']);
+                            if (!empty($address['zip_code'])) $city_state_zip_parts[] = esc_html($address['zip_code']);
+
+                            if (!empty($city_state_zip_parts)) :
+                            ?>
+                                <p><?php echo implode(', ', $city_state_zip_parts); ?></p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($phones) : ?>
+                    <div class="phone-numbers">
+                        <strong>Phone:</strong>
+                        <?php foreach ($phones as $phone) : ?>
+                            <p>
+                                <?php if ($phone['phone_type']) : ?>
+                                    <em><?php echo esc_html($phone['phone_type']); ?>:</em>
+                                <?php endif; ?>
+                                <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $phone['phone_number'])); ?>">
+                                    <?php echo esc_html($phone['phone_number']); ?>
+                                </a>
+                            </p>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <?php
+        endwhile;
+    endif;
+    ?>
+
     <?php 
     // Rep Associates
     if (have_rows('rep_associates', $post_id)) :
     ?>
         <div class="rep-associates-section">
-            <h4>Team Members</h4> <?php // Or a more generic title like "Contacts" or "Associates" ?>
+            <h4>Team Members</h4>
             <div class="rep-card-grid">
             <?php 
             while (have_rows('rep_associates', $post_id)) : the_row();
-                $user_id = get_sub_field('rep_user');
-                $user_data = $user_id ? get_userdata($user_id) : null;
-                $email_override = get_sub_field('rep_contact_email_override');
-                $phone_override = get_sub_field('rep_contact_phone_override');
-                $associate_specific_areas_text = get_sub_field('associate_specific_areas_text');
-                $associate_name = $user_data ? $user_data->display_name : 'Associate Name Not Found';
-                $rep_title = $user_id ? get_field('rep_title', 'user_' . $user_id) : '';
+                $associate_type = get_sub_field('associate_type');
+                $associate_specific_areas_text = get_sub_field('rep_specific_areas_text');
+
+                $associate_name = '';
+                $rep_title = '';
+                $contact_info_html = '';
+
+                if ($associate_type === 'wp_user') {
+                    $user_id = get_sub_field('rep_user');
+                    if ($user_id) {
+                        $user_data = get_userdata($user_id);
+                        if ($user_data) {
+                            $associate_name = $user_data->display_name;
+                            $rep_title = get_field('rep_title', 'user_' . $user_id);
+
+                            $email_override = get_sub_field('rep_contact_email_override');
+                            $phone_override = get_sub_field('rep_contact_phone_override');
+
+                            $phone_to_display = !empty($phone_override) ? $phone_override : get_field('rep_primary_phone', 'user_' . $user_data->ID);
+                            if (!empty($phone_to_display)) {
+                                $contact_info_html .= sprintf(
+                                    '<p class="rep-phone"><ion-icon name="call" role="img" class="hydrated" aria-label="call"></ion-icon> <strong>Phone:</strong> <a href="tel:%s">%s</a></p>',
+                                    esc_attr(preg_replace('/[^0-9+]/', '', $phone_to_display)),
+                                    esc_html($phone_to_display)
+                                );
+                            }
+
+                            $email_to_display = !empty($email_override) ? $email_override : ($user_data ? $user_data->user_email : '');
+                            if (!empty($email_to_display) && is_email($email_to_display)) {
+                                $contact_info_html .= sprintf(
+                                    '<p class="rep-email"><ion-icon name="mail" role="img" class="hydrated" aria-label="mail"></ion-icon> <strong>Email:</strong> <a href="mailto:%s">%s</a></p>',
+                                    esc_attr($email_to_display),
+                                    esc_html($email_to_display)
+                                );
+                            }
+                        } else {
+                            $associate_name = 'User Not Found';
+                        }
+                    }
+                } elseif ($associate_type === 'manual') {
+                    $associate_name = get_sub_field('manual_rep_name');
+                    $rep_title = get_sub_field('manual_rep_title');
+                    $associate_email = get_sub_field('manual_rep_email');
+                    $associate_phone = get_sub_field('manual_rep_phone');
+
+                    if (!empty($associate_phone)) {
+                        $contact_info_html .= sprintf(
+                            '<p class="rep-phone"><ion-icon name="call" role="img" class="hydrated" aria-label="call"></ion-icon> <strong>Phone:</strong> <a href="tel:%s">%s</a></p>',
+                            esc_attr(preg_replace('/[^0-9+]/', '', $associate_phone)),
+                            esc_html($associate_phone)
+                        );
+                    }
+                    if (!empty($associate_email) && is_email($associate_email)) {
+                        $contact_info_html .= sprintf(
+                            '<p class="rep-email"><ion-icon name="mail" role="img" class="hydrated" aria-label="mail"></ion-icon> <strong>Email:</strong> <a href="mailto:%s">%s</a></p>',
+                            esc_attr($associate_email),
+                            esc_html($associate_email)
+                        );
+                    }
+                }
+
+                if (empty(trim($associate_name))) continue;
             ?>
                 <div class="rep-card">
                     <h3 class="rep-name"><?php echo esc_html($associate_name); ?></h3>
@@ -108,11 +221,9 @@ $rg_website = get_field('rg_website', $post_id);
                         <p class="rep-territory"><strong>Specific Areas:</strong> <?php echo esc_html($associate_specific_areas_text); ?></p>
                     <?php endif; ?>
                     <div class="rep-contact-info">
-                        <?php 
-                        // Call public method on the $shortcode_instance
-                        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-                        echo $shortcode_instance->render_rep_contact_info($user_data, $email_override, $phone_override);
-                        ?>
+                        <?php // This HTML is pre-escaped in the logic above ?>
+                        <?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                        <?php echo $contact_info_html; ?>
                     </div>
                 </div>
             <?php endwhile; ?>

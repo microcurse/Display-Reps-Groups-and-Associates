@@ -127,43 +127,102 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
         </div>
     <?php endif; ?>
 
+    <?php
+    // Satellite Offices
+    if (have_rows('satellite_offices', $post_id)) :
+        while (have_rows('satellite_offices', $post_id)) : the_row();
+            $office_name = get_sub_field('office_name');
+            $address = get_sub_field('office_address');
+            $phones = get_sub_field('office_phone_numbers');
+            ?>
+            <div class="satellite-office-details">
+                <?php if ($office_name) : ?>
+                    <h5 class="satellite-office-title"><?php echo esc_html($office_name); ?></h5>
+                <?php endif; ?>
+
+                <?php if ($address && is_array($address) && !empty(array_filter($address))) : ?>
+                    <div class="contact-item address-details">
+                        <ion-icon name="location" aria-label="Address"></ion-icon>
+                        <span class="contact-text">
+                            <?php
+                            $address_lines = [];
+                            if (!empty($address['address_1'])) $address_lines[] = esc_html($address['address_1']);
+                            if (!empty($address['address_2'])) $address_lines[] = esc_html($address['address_2']);
+                            $city_state_zip = [];
+                            if (!empty($address['city'])) $city_state_zip[] = esc_html($address['city']);
+                            if (!empty($address['state'])) $city_state_zip[] = esc_html($address['state']);
+                            if (!empty($address['zip_code'])) $city_state_zip[] = esc_html($address['zip_code']);
+                            if (!empty($city_state_zip)) $address_lines[] = implode(', ', array_filter($city_state_zip));
+                            echo implode('<br>', array_filter($address_lines));
+                            ?>
+                        </span>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($phones) : ?>
+                    <?php foreach ($phones as $phone) :
+                        $phone_type = !empty($phone['phone_type']) ? esc_html($phone['phone_type']) : 'Phone';
+                        $phone_number = !empty($phone['phone_number']) ? esc_html($phone['phone_number']) : '';
+                        if ($phone_number) :
+                            $icon_name = 'call';
+                            if (strtolower($phone_type) === 'fax') {
+                                $icon_name = 'print';
+                            }
+                    ?>
+                        <div class="contact-item phone-details">
+                            <ion-icon name="<?php echo $icon_name; ?>" aria-hidden="true"></ion-icon>
+                            <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $phone_number)); ?>" aria-label="<?php echo $phone_type . ': ' . $phone_number; ?>">
+                                <?php echo $phone_number; ?>
+                            </a>
+                        </div>
+                    <?php 
+                        endif;
+                    endforeach; ?>
+                <?php endif; ?>
+            </div>
+            <?php
+        endwhile;
+    endif;
+    ?>
+
     <?php // Team Members Section ?>
-    <?php if ($team_members) : ?>
+    <?php if (have_rows('rep_associates', $post_id)) : ?>
         <div class="team-members-section">
             <h4 class="team-section-title">Team</h4>
             <?php
-            $total_associates = count($team_members);
-            $current_associate_index = 0;
-            ?>
-            <?php foreach ($team_members as $associate) :
-                $current_associate_index++;
-                $user_id = $associate['rep_user'];
-                if (!$user_id) continue;
-
-                $user_info = get_userdata($user_id);
-                if (!$user_info) continue;
-
-                $associate_name = esc_html($user_info->display_name);
-                $associate_title = get_field('rep_title', 'user_' . $user_id);
-                $associate_areas_served = esc_html($associate['rep_specific_areas_text']);
+            while (have_rows('rep_associates', $post_id)) : the_row();
+                $associate_type = get_sub_field('associate_type');
+                $associate_areas_served = esc_html(get_sub_field('rep_specific_areas_text'));
                 
-                // Email: Override from repeater, then user profile, then empty.
-                $associate_email_override = $associate['rep_contact_email_override'];
-                $associate_email = !empty($associate_email_override) ? $associate_email_override : $user_info->user_email;
-                
-                // Phone: Override from repeater, then user profile (ACF field), then empty.
-                $associate_phone_override = !empty($associate['rep_contact_phone_override']) ? $associate['rep_contact_phone_override'] : '';
+                $associate_name = '';
+                $associate_title = '';
+                $associate_email = '';
                 $associate_phone = '';
-                if (!empty($associate_phone_override)) {
-                    $associate_phone = esc_html($associate_phone_override);
-                } else {
-                    // Use ACF field 'rep_primary_phone' from user profile
-                    $user_profile_phone = get_field('rep_primary_phone', 'user_' . $user_id);
-                    if (!empty($user_profile_phone)) {
-                        $associate_phone = esc_html($user_profile_phone);
+
+                if ($associate_type === 'wp_user') {
+                    $user_id = get_sub_field('rep_user');
+                    if ($user_id) {
+                        $user_info = get_userdata($user_id);
+                        if ($user_info) {
+                            $associate_name = esc_html($user_info->display_name);
+                            $associate_title = get_field('rep_title', 'user_' . $user_id);
+                            
+                            $email_override = get_sub_field('rep_contact_email_override');
+                            $associate_email = !empty($email_override) ? $email_override : $user_info->user_email;
+                            
+                            $phone_override = get_sub_field('rep_contact_phone_override');
+                            $associate_phone = !empty($phone_override) ? esc_html($phone_override) : esc_html(get_field('rep_primary_phone', 'user_' . $user_id));
+                        }
                     }
+                } elseif ($associate_type === 'manual') {
+                    $associate_name = esc_html(get_sub_field('manual_rep_name'));
+                    $associate_title = esc_html(get_sub_field('manual_rep_title'));
+                    $associate_email = get_sub_field('manual_rep_email');
+                    $associate_phone = get_sub_field('manual_rep_phone');
                 }
-            ?>
+
+                if (empty(trim($associate_name))) continue;
+                ?>
                 <div class="rep-associate-item">
                     <h5 class="rep-associate-name"><?php echo $associate_name; ?></h5>
                     <?php if (!empty($associate_title)) : ?>
@@ -178,9 +237,9 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
                     <?php if ($associate_phone) : ?>
                         <div class="contact-item rep-associate-contact-item phone-details">
                             <ion-icon name="call" aria-hidden="true"></ion-icon>
-                            <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/g', '', $associate_phone)); ?>" 
+                            <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $associate_phone)); ?>" 
                                aria-label="Call <?php echo $associate_name; ?> at <?php echo $associate_phone; ?>">
-                                <span class="contact-text-hidden">Phone: </span><?php echo $associate_phone; ?>
+                                <span class="contact-text-hidden">Phone: </span><?php echo esc_html($associate_phone); ?>
                             </a>
                         </div>
                     <?php endif; ?>
@@ -195,12 +254,11 @@ $header_color = !empty($area_color) ? $area_color : $default_detail_header_color
                     <?php endif; ?>
                 </div>
                 <?php 
-                // Add a divider if there are multiple associates and this is not the last one
-                if ($total_associates > 1 && $current_associate_index < $total_associates) :
+                if (get_row_index() < count(get_field('rep_associates', $post_id))) :
                 ?>
                 <hr class="team-divider">
                 <?php endif; ?>
-            <?php endforeach; ?>
+            <?php endwhile; ?>
         </div>
     <?php endif; ?>
 </div> 
