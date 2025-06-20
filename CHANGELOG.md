@@ -1,28 +1,29 @@
 # Changelog
 
+## 2.2.0 - 2025-06-20
+
+### Added
+- **Manual Rep Associate Entry:** Added a fallback system to allow for manual entry of Rep Associates who do not have a WordPress user account. Includes fields for Full Name, Title, Email, and Phone.
+- **Satellite Offices:** Implemented a repeater field for Rep Groups to add multiple satellite office locations, each with its own address and phone numbers.
+- **Import/Export Functionality:** Added a dedicated admin page to import and export all plugin data (Rep Groups, Areas Served, and map settings) as a JSON file, facilitating migration between sites.
+
+### Changed
+- Updated the Rep Associate repeater to display the associate's name in the collapsed view for easier identification.
+- Relabeled the primary address field for Rep Groups to "Main Office Address" for clarity.
+
+## 2.1.0
+
+### Added
+- Added a `rep_title` field to user profiles for Reps.
+- Override fields for email and phone on a per-associate basis within a Rep Group.
+- SVG map color is now managed on the Rep Group post.
+
+### Changed
+- Re-styled the map info panel for a cleaner, more modern look.
+- Improved AJAX handling and data loading for the interactive map.
+
+## 2.0.0
+- Initial major release with interactive SVG map functionality.
+
 ### 2.1.0 (Current Version)
-*   **Added Interactive SVG Map:** New `[rep_map]` shortcode for local/international territory display.
-*   Features clickable regions, pan/zoom, and a dynamic info panel with Rep Group and Associate details.
-*   Implemented "Areas Served" taxonomy and linked it to SVG regions via term meta.
-*   Added `rg_map_scope` ACF field to Rep Groups for map-specific filtering.
-*   Side panel includes "View By" (Rep Groups/Areas) and A-Z/Z-A sorting.
-*   Map region colors now primarily managed via WP option populated by the new WP-CLI bulk import script.
-*   Rep Group list items in map panel show color indicators from `rep_group_map_color` ACF field.
-*   WP-CLI script `bulk_import_areas.php` for managing "Areas Served" terms, SVG IDs, and map colors.
-*   Enhanced styling with theme CSS variable support for light/dark modes.
-*   Resolved various bugs related to settings, export, and UI interactions.
-
-### 2.0.0 - 2.0.2
-*   Added card-based layout for rep associates.
-*   Improved import/export functionality for Rep Group CPT.
-*   Added proper styling and organization.
-*   Removed author display from CPT templates.
-*   Added GitHub integration for plugin updates.
-*   Fixed duplicate "Map Settings" menu.
-*   Added "Settings saved." notice for map settings updates.
-*   Refined ACF field types for better data integrity (e.g., "Territory Served" to Taxonomy).
-
-### 1.0.0
-*   Initial release.
-*   Basic Rep Group CPT and display functionality.
-*   Initial Import/Export capabilities for Rep Group CPT.
+*   **Added Interactive SVG Map:** New `[rep_map]`
