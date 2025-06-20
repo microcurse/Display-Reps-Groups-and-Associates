@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.1
+
+### Fixed
+- **Import/Export Taxonomy Assignment:** Corrected the import logic to ensure "Areas Served" taxonomies are always created before being assigned to their Rep Group posts, fixing a critical bug where relationships were not being saved.
+- **Import/Export Map URLs:** The import process now automatically replaces the source site's URL with the destination site's URL in the SVG map settings, ensuring maps work correctly after migration.
+
 ## 2.2.0 - 2025-06-20
 
 ### Added

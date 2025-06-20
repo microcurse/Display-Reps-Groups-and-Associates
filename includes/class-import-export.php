@@ -103,6 +103,7 @@ class Import_Export {
         $export_data = [
             'version' => defined('REP_GROUP_VERSION') ? REP_GROUP_VERSION : '1.0.0',
             'timestamp' => current_time('mysql'),
+            'source_url' => site_url(),
             'posts' => [],
             'terms' => [],
             'options' => []
@@ -119,10 +120,17 @@ class Import_Export {
                 $posts_query->the_post();
                 $post_id = get_the_ID();
                 $post_data = get_post($post_id, ARRAY_A);
+                
                 $acf_fields = get_fields($post_id);
                 if ($acf_fields) {
                     $post_data['acf_fields'] = $acf_fields;
                 }
+
+                $assigned_terms = wp_get_object_terms($post_id, 'area-served', ['fields' => 'slugs']);
+                if (!is_wp_error($assigned_terms) && !empty($assigned_terms)) {
+                    $post_data['assigned_terms_area_served'] = $assigned_terms;
+                }
+
                 $export_data['posts'][] = $post_data;
             }
             wp_reset_postdata();
@@ -169,6 +177,38 @@ class Import_Export {
             'options_updated' => 0,
         ];
 
+        // 1. Import Terms first
+        if (!empty($data['terms']) && is_array($data['terms'])) {
+            foreach ($data['terms'] as $term_item) {
+                 if (!isset($term_item['slug']) || !isset($term_item['name'])) continue;
+                $term = term_exists($term_item['slug'], 'area-served');
+                if ($term) {
+                    $term_id = $term['term_id'];
+                    wp_update_term($term_id, 'area-served', ['name' => $term_item['name'], 'slug' => $term_item['slug']]);
+                    $stats['terms_updated']++;
+                } else {
+                    $new_term = wp_insert_term($term_item['name'], 'area-served', ['slug' => $term_item['slug']]);
+                    if (!is_wp_error($new_term)) {
+                        $term_id = $new_term['term_id'];
+                        $stats['terms_created']++;
+                    } else {
+                        $stats['terms_skipped']++;
+                        continue;
+                    }
+                }
+                
+                if (isset($term_id) && !empty($term_item['meta']) && is_array($term_item['meta'])) {
+                    foreach ($term_item['meta'] as $meta_key => $meta_value) {
+                         if (isset($meta_value[0])) {
+                            update_term_meta($term_id, $meta_key, $meta_value[0]);
+                         }
+                    }
+                }
+            }
+        }
+
+        // 2. Import Posts and store term relationships for later
+        $post_term_map = [];
         if (!empty($data['posts']) && is_array($data['posts'])) {
             foreach ($data['posts'] as $post_item) {
                 if (!isset($post_item['post_title'])) continue;
@@ -206,40 +246,29 @@ class Import_Export {
                         update_field($key, $value, $post_id);
                     }
                 }
-            }
-        }
 
-        if (!empty($data['terms']) && is_array($data['terms'])) {
-            foreach ($data['terms'] as $term_item) {
-                 if (!isset($term_item['slug']) || !isset($term_item['name'])) continue;
-                $term = term_exists($term_item['slug'], 'area-served');
-                if ($term) {
-                    $term_id = $term['term_id'];
-                    wp_update_term($term_id, 'area-served', ['name' => $term_item['name'], 'slug' => $term_item['slug']]);
-                    $stats['terms_updated']++;
-                } else {
-                    $new_term = wp_insert_term($term_item['name'], 'area-served', ['slug' => $term_item['slug']]);
-                    if (!is_wp_error($new_term)) {
-                        $term_id = $new_term['term_id'];
-                        $stats['terms_created']++;
-                    } else {
-                        $stats['terms_skipped']++;
-                        continue;
-                    }
-                }
-                
-                if (isset($term_id) && !empty($term_item['meta']) && is_array($term_item['meta'])) {
-                    foreach ($term_item['meta'] as $meta_key => $meta_value) {
-                         if (isset($meta_value[0])) {
-                            update_term_meta($term_id, $meta_key, $meta_value[0]);
-                         }
-                    }
+                if (isset($post_item['assigned_terms_area_served']) && is_array($post_item['assigned_terms_area_served'])) {
+                    $post_term_map[$post_id] = $post_item['assigned_terms_area_served'];
                 }
             }
         }
+        
+        // 3. Assign terms to posts now that posts and terms are imported
+        if (!empty($post_term_map)) {
+            foreach($post_term_map as $post_id => $term_slugs) {
+                wp_set_object_terms($post_id, $term_slugs, 'area-served');
+            }
+        }
 
+        // 4. Import Options (with URL replacement)
         if (!empty($data['options']) && is_array($data['options'])) {
+            $source_url = isset($data['source_url']) ? rtrim($data['source_url'], '/') : '';
+            $destination_url = rtrim(site_url(), '/');
+
             foreach ($data['options'] as $option_name => $option_value) {
+                if (!empty($source_url) && !empty($option_value) && is_string($option_value) && $source_url !== $destination_url) {
+                    $option_value = str_replace($source_url, $destination_url, $option_value);
+                }
                 update_option($option_name, $option_value);
                 $stats['options_updated']++;
             }
