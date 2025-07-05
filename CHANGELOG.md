@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.3.0 - 2025-01-02
+
+### Added
+- **Fallback Templates:** Created simplified fallback page templates for single and archive rep-group pages with clear navigation back to the interactive map
+- **Template Loader:** Implemented plugin-based template loading system for portability across themes
+- **CSS Scoping:** Added proper CSS scoping to prevent conflicts with existing map functionality
+
+### Changed
+- **Simplified Layout:** Replaced complex card-based layouts with clean, minimal fallback pages focused on essential information
+- **Sidebar Integration:** Fixed sidebar loading to properly use theme's standard `get_sidebar('shop')` approach
+- **Map Navigation:** Updated links to point to correct `/forbes-reps/` path for interactive map
+- **CSS Optimization:** Streamlined CSS from complex two-column layouts to simple single-column fallback styling
+
+### Fixed
+- **Associates Display:** Fixed field name from `rg_associates` to `rep_associates` to properly display associate information
+- **Sidebar Missing:** Resolved sidebar not appearing by implementing proper WordPress template structure
+- **CSS Conflicts:** Eliminated conflicts between rep-group.css and frontend.css by adding specific page-type prefixes
+
 ## 2.2.1
 
 ### Fixed

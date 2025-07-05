@@ -1,258 +1,3 @@
-/* Hide author information - specific to block theme */
-.single-rep-group .wp-block-post-author-name,
-.single-rep-group .wp-block-group.has-accent-4-color.is-layout-flex,
-.post-type-archive-rep-group .wp-block-post-author-name,
-.post-type-archive-rep-group .wp-block-group.has-accent-4-color.is-layout-flex {
-    display: none !important;
-}
-
-/* Archive Page Styles */
-.post-type-archive-rep-group {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem 1rem;
-}
-
-.archive-description {
-    margin-bottom: 3rem;
-    padding: 2rem;
-    background-color: #f8f9fa;
-    border-radius: 8px;
-}
-
-.rep-groups-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 2rem;
-    margin-top: 2rem;
-}
-
-.rep-group-card {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.rep-group-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    -webkit-transform: translateY(-4px);
-    -moz-transform: translateY(-4px);
-    -ms-transform: translateY(-4px);
-    -o-transform: translateY(-4px);
-}
-
-.rep-group-image {
-    width: 100%;
-    height: 200px;
-    background-color: #e9ecef;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.rep-group-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.rep-group-content {
-    padding: 1.5rem;
-}
-
-.rep-group-title {
-    font-size: 1.25rem;
-    margin: 0 0 0.5rem;
-    color: #2c3338;
-}
-
-.rep-group-area {
-    color: #646970;
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .rep-groups-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Existing styles */
-.rep-group {
-    max-width: 1200px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-}
-
-.area-served,
-.address {
-    margin-bottom: 2rem;
-}
-
-.address-content {
-    margin-top: 0.5rem;
-}
-
-.address-content p {
-    margin: 0.25rem 0;
-}
-
-.rep-section-title {
-    font-size: 1.75rem;
-    margin: 2rem 0 1.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid #eee;
-}
-
-.rep-card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1rem;
-}
-
-.rep-card {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.rep-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.rep-name {
-    font-size: 1.25rem;
-    margin: 0 0 1rem;
-    color: #2c3338;
-}
-
-.rep-territory {
-    margin-bottom: 1rem;
-    color: #50575e;
-}
-
-.rep-contact-info {
-    border-top: 1px solid #eee;
-    margin-top: 1rem;
-    padding-top: 1rem;
-}
-
-.rep-contact-info p {
-    margin: 0.5rem 0;
-}
-
-.rep-contact-info a {
-    color: #0073aa;
-    text-decoration: none;
-}
-
-.rep-contact-info a:hover {
-    color: #00a0d2;
-    text-decoration: underline;
-}
-
-/* Rep Group Archive Styles */
-.rep-groups-archive {
-    padding: 2rem 0;
-}
-
-.rep-group-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 2rem;
-    margin: 0 auto;
-    max-width: 1200px;
-    padding: 0 1rem;
-}
-
-.rep-group-logo {
-    height: 200px;
-    overflow: hidden;
-    background: #f5f5f5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.rep-group-logo img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    padding: 1rem;
-}
-
-.rep-group-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #f5f5f5;
-}
-
-.rep-group-placeholder .dashicons {
-    font-size: 48px;
-    width: 48px;
-    height: 48px;
-    color: #ccc;
-}
-
-.rep-group-title {
-    margin: 0 0 1rem;
-    font-size: 1.5rem;
-    line-height: 1.3;
-}
-
-.rep-group-title a {
-    color: #333;
-    text-decoration: none;
-}
-
-.rep-group-title a:hover {
-    color: #0073aa;
-}
-
-.rep-group-areas {
-    margin-bottom: 1.5rem;
-    color: #666;
-    font-size: 0.95rem;
-}
-
-.rep-group-link {
-    display: inline-block;
-    padding: 0.75rem 1.5rem;
-    background: #0073aa;
-    color: white !important;
-    text-decoration: none;
-    border-radius: 4px;
-    transition: background 0.2s ease;
-    text-align: center;
-    font-weight: 500;
-}
-
-.rep-group-link:hover {
-    background: #005177;
-}
-
-/* Hide WordPress default elements */
-.rep-group-card .entry-meta,
-.rep-group-card .entry-footer,
-.rep-group-card .post-date,
-.rep-group-card .post-author {
-    display: none !important;
-}
-
 /* Interactive Map Layout Styles */
 .rep-group-map-interactive-area {
     display: flex;
@@ -695,4 +440,208 @@ ion-icon {
 .sort-toggle-button ion-icon {
     font-size: 1.1em;
     color: var(--text-color, #333333);
+}
+
+/* =================================================================
+   Rep Group Fallback Page Styles
+   ================================================================= */
+
+/* Navigation Notice */
+.rep-group-notice {
+    background: var(--bg-color, #f9f9f9);
+    border: 1px solid var(--border-color, #e1e1e6);
+    padding: 1rem;
+    margin-bottom: 2rem;
+    border-radius: 4px;
+}
+
+.rep-group-notice p {
+    margin: 0;
+    color: var(--text-color, #444);
+}
+
+.rep-group-notice a {
+    color: var(--link-color, #4a66ff);
+    text-decoration: none;
+}
+
+.rep-group-notice a:hover {
+    text-decoration: underline;
+}
+
+/* Single Rep Group Page */
+.single-rep-group .entry-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color, #e1e1e6);
+}
+
+.single-rep-group .entry-title {
+    color: var(--text-color, #444);
+    margin-bottom: 0;
+}
+
+/* Content Sections */
+.rep-contact-section,
+.rep-address-section,
+.rep-satellite-section,
+.rep-associates-section {
+    margin-bottom: 2rem;
+}
+
+.rep-contact-section h2,
+.rep-address-section h2,
+.rep-satellite-section h2,
+.rep-associates-section h2 {
+    color: var(--text-color, #444);
+    border-bottom: 1px solid var(--border-color, #e1e1e6);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Phone Numbers */
+.phone-numbers ul {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.phone-numbers li {
+    margin-bottom: 0.25rem;
+}
+
+/* Satellite Offices */
+.satellite-office {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color, #e1e1e6);
+}
+
+.satellite-office:last-child {
+    border-bottom: none;
+}
+
+.satellite-office h3 {
+    color: var(--text-color, #444);
+    margin-bottom: 0.5rem;
+}
+
+/* Associates */
+.associate-item {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color, #e1e1e6);
+}
+
+.associate-item:last-child {
+    border-bottom: none;
+}
+
+.associate-item h3 {
+    color: var(--text-color, #444);
+    margin-bottom: 0.5rem;
+}
+
+.associate-item p {
+    margin: 0.25rem 0;
+}
+
+/* Navigation */
+.rep-group-navigation {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color, #e1e1e6);
+}
+
+.rep-group-navigation .button {
+    display: inline-block;
+    background: var(--button-bg, #29317d);
+    color: var(--color-white, #fff);
+    padding: 0.75rem 1.5rem;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: var(--hover-transition, 150ms cubic-bezier(0.2,0,0,1));
+}
+
+.rep-group-navigation .button:hover {
+    background: var(--button-bg-hover, #404999);
+}
+
+/* Archive Page */
+.post-type-archive-rep-group .page-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color, #e1e1e6);
+}
+
+.post-type-archive-rep-group .page-title {
+    color: var(--text-color, #444);
+    margin-bottom: 0.5rem;
+}
+
+.archive-description {
+    color: var(--text-color, #444);
+    margin: 0;
+}
+
+/* Rep Groups Listing */
+.rep-groups-listing {
+    margin-bottom: 2rem;
+}
+
+.rep-group-item {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color, #e1e1e6);
+}
+
+.rep-group-item:last-child {
+    border-bottom: none;
+}
+
+.rep-group-title {
+    margin-bottom: 1rem;
+}
+
+.rep-group-title a {
+    color: var(--text-color, #444);
+    text-decoration: none;
+}
+
+.rep-group-title a:hover {
+    color: var(--link-color, #4a66ff);
+}
+
+.rep-group-summary p {
+    margin: 0.5rem 0;
+}
+
+.rep-group-summary a {
+    color: var(--link-color, #4a66ff);
+    text-decoration: none;
+}
+
+.rep-group-summary a:hover {
+    text-decoration: underline;
+}
+
+/* No Results */
+.no-results .page-header {
+    margin-bottom: 1rem;
+}
+
+.no-results .page-title {
+    color: var(--text-color, #444);
+}
+
+.no-results .page-content {
+    color: var(--text-color, #444);
+}
+
+.no-results a {
+    color: var(--link-color, #4a66ff);
+    text-decoration: none;
+}
+
+.no-results a:hover {
+    text-decoration: underline;
 }

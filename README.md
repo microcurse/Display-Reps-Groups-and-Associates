@@ -17,6 +17,7 @@ This plugin provides a comprehensive solution for managing sales representatives
     *   Dynamic side panel with list views for both Rep Groups and Areas Served, with A-Z/Z-A sorting.
 *   **"Areas Served" Taxonomy:** A dedicated taxonomy to define sales territories and link them to Rep Groups and specific regions on the SVG map.
 *   **Import/Export Tool:** A built-in tool to export all plugin data (Rep Groups, Areas, settings) to a JSON file and import it into another site, making migrations simple.
+*   **Fallback Templates:** Built-in fallback page templates that display rep group information when accessed directly, with clear navigation back to the interactive map experience.
 *   **Developer Friendly:** Includes WP-CLI support for some operations and is built with standard WordPress hooks and filters for extensibility.
 
 ## Installation
@@ -58,6 +59,17 @@ Use the following shortcode in your pages or posts:
 1.  Navigate to **Rep Groups > Import / Export**.
 2.  **To Export:** Click the "Export All Data" button. A JSON file will be downloaded.
 3.  **To Import:** Click "Choose File," select the JSON file you previously exported, and click "Import Data."
+
+### Fallback Templates
+
+The plugin includes built-in fallback templates that display rep group information when users access rep group pages directly (e.g., via URL manipulation or search engine indexing). These templates provide:
+
+*   **Clear Navigation:** Prominent links back to the interactive map experience
+*   **Essential Information:** Contact details, office locations, and associate information
+*   **Minimal Styling:** Clean, simple layout that works across different themes
+*   **Sidebar Integration:** Automatically detects and displays WooCommerce sidebars when available
+
+These templates are designed as safety nets rather than primary user interfaces, ensuring users always have access to information while guiding them to the preferred interactive map experience.
 
 ## Frequently Asked Questions
 

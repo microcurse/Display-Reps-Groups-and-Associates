@@ -1,233 +1,229 @@
 <?php
 /**
- * Template for displaying a single Rep Group.
+ * Template for displaying a single rep-group post (Fallback)
  *
- * Expected variables:
- * $post_id (int) - The ID of the rep group post.
- * $shortcode_instance (RepGroup\\Shortcode) - Instance of the Shortcode class to call helper methods.
+ * @package Display_Reps_Groups_and_Associates
  */
 
-// Ensure $post_id is available.
-if (empty($post_id) || !is_numeric($post_id)) {
-    echo '<p>Error: Rep Group ID not provided for single display template.</p>';
-    return;
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
 }
 
-// Ensure $shortcode_instance is available.
-if (empty($shortcode_instance) || !is_a($shortcode_instance, 'RepGroup\\Shortcode')) {
-    echo '<p>Error: Shortcode instance not available for single display template.</p>';
-    return;
-}
-
-// Fetch Rep Group specific fields
-$rg_website = get_field('rg_website', $post_id);
-
+get_header();
 ?>
-<section class="rep-group rep-group-single-display">
-    <?php 
-    // Get Area Served from taxonomy
-    $areas = get_the_terms($post_id, 'area-served');
-    if ($areas && !is_wp_error($areas)) :
-    ?>
-        <div class="area-served">
-            <strong>Area Served:</strong> 
-            <span>
-                <?php
-                $area_names = array_map(function($term) {
-                    return esc_html($term->name);
-                }, $areas);
-                echo implode(', ', $area_names);
-                ?>
-            </span>
-        </div>
-    <?php endif; ?>
 
-    <?php 
-    // Address Container
-    $address = get_field('rg_address_container', $post_id);
-    if ($address && is_array($address)) :
-    ?>
-        <div class="address">
-            <strong>Address:</strong>
-            <div class="address-content">
-                <?php if (!empty($address['rg_address_1'])) : ?>
-                    <p><?php echo esc_html($address['rg_address_1']); ?></p>
-                <?php endif; ?>
-                <?php if (!empty($address['rg_address_2'])) : ?>
-                    <p><?php echo esc_html($address['rg_address_2']); ?></p>
-                <?php endif; ?>
-                <?php 
-                $city_state_zip_parts = [];
-                if (!empty($address['rg_city'])) $city_state_zip_parts[] = esc_html($address['rg_city']);
-                if (!empty($address['rg_state'])) $city_state_zip_parts[] = esc_html($address['rg_state']);
-                if (!empty($address['rg_zip_code'])) $city_state_zip_parts[] = esc_html($address['rg_zip_code']);
+<?php get_sidebar('shop'); ?>
+
+<main id="primary" class="site-main">
+    <?php while (have_posts()) : the_post(); ?>
+        
+        <article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
+            
+            <!-- Navigation Notice -->
+            <div class="rep-group-notice">
+                <p><strong>Note:</strong> This is a direct link to rep information. For the best experience, <a href="/forbes-reps/">view the interactive map</a>.</p>
+            </div>
+
+            <header class="entry-header">
+                <?php the_title('<h1 class="entry-title">', '</h1>'); ?>
+            </header>
+
+            <div class="entry-content">
                 
-                if (!empty($city_state_zip_parts)) :
-                ?>                    
-                    <p><?php echo implode(', ', $city_state_zip_parts); // Join with comma and space ?></p>
-                <?php endif; ?>
-            </div>
-        </div>
-    <?php endif; ?>
+                <!-- Contact Information -->
+                <section class="rep-contact-section">
+                    <h2>Contact Information</h2>
+                    
+                    <?php
+                    // Website
+                    $website = get_field('rg_website');
+                    if ($website) : ?>
+                        <p><strong>Website:</strong> <a href="<?php echo esc_url($website); ?>" target="_blank"><?php echo esc_html($website); ?></a></p>
+                    <?php endif; ?>
 
-    <?php // Website Section ?>
-    <?php if ($rg_website) : ?>
-        <div class="rep-group-website">
-            <strong>Website:</strong>
-            <p>
-                <a href="<?php echo esc_url($rg_website); ?>" target="_blank" rel="noopener noreferrer">
-                    <?php echo esc_html($rg_website); ?>
-                </a>
-            </p>
-        </div>
-    <?php endif; ?>
+                    <?php
+                    // Email
+                    $email = get_field('rg_email');
+                    if ($email) : ?>
+                        <p><strong>Email:</strong> <a href="mailto:<?php echo esc_attr($email); ?>"><?php echo esc_html($email); ?></a></p>
+                    <?php endif; ?>
 
-    <?php
-    // Satellite Offices
-    if (have_rows('satellite_offices', $post_id)) :
-        while (have_rows('satellite_offices', $post_id)) : the_row();
-            $office_name = get_sub_field('office_name');
-            $address = get_sub_field('office_address');
-            $phones = get_sub_field('office_phone_numbers');
-            ?>
-            <div class="satellite-office">
-                <?php if ($office_name) : ?>
-                    <h4><?php echo esc_html($office_name); ?></h4>
-                <?php endif; ?>
-
-                <?php if ($address && is_array($address)) : ?>
-                    <div class="address">
-                        <strong>Address:</strong>
-                        <div class="address-content">
-                            <?php if (!empty($address['address_1'])) : ?>
-                                <p><?php echo esc_html($address['address_1']); ?></p>
-                            <?php endif; ?>
-                            <?php if (!empty($address['address_2'])) : ?>
-                                <p><?php echo esc_html($address['address_2']); ?></p>
-                            <?php endif; ?>
-                            <?php
-                            $city_state_zip_parts = [];
-                            if (!empty($address['city'])) $city_state_zip_parts[] = esc_html($address['city']);
-                            if (!empty($address['state'])) $city_state_zip_parts[] = esc_html($address['state']);
-                            if (!empty($address['zip_code'])) $city_state_zip_parts[] = esc_html($address['zip_code']);
-
-                            if (!empty($city_state_zip_parts)) :
-                            ?>
-                                <p><?php echo implode(', ', $city_state_zip_parts); ?></p>
-                            <?php endif; ?>
+                    <?php
+                    // Phone Numbers
+                    $phone_numbers = get_field('rg_phone_numbers');
+                    if ($phone_numbers) : ?>
+                        <div class="phone-numbers">
+                            <strong>Phone:</strong>
+                            <ul>
+                                <?php foreach ($phone_numbers as $phone) : ?>
+                                    <li><?php echo esc_html($phone['rg_phone_type']); ?>: <?php echo esc_html($phone['rg_phone_number']); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
                         </div>
-                    </div>
-                <?php endif; ?>
+                    <?php endif; ?>
 
-                <?php if ($phones) : ?>
-                    <div class="phone-numbers">
-                        <strong>Phone:</strong>
-                        <?php foreach ($phones as $phone) : ?>
-                            <p>
-                                <?php if ($phone['phone_type']) : ?>
-                                    <em><?php echo esc_html($phone['phone_type']); ?>:</em>
-                                <?php endif; ?>
-                                <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $phone['phone_number'])); ?>">
-                                    <?php echo esc_html($phone['phone_number']); ?>
-                                </a>
-                            </p>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-            <?php
-        endwhile;
-    endif;
-    ?>
-
-    <?php 
-    // Rep Associates
-    if (have_rows('rep_associates', $post_id)) :
-    ?>
-        <div class="rep-associates-section">
-            <h4>Team Members</h4>
-            <div class="rep-card-grid">
-            <?php 
-            while (have_rows('rep_associates', $post_id)) : the_row();
-                $associate_type = get_sub_field('associate_type');
-                $associate_specific_areas_text = get_sub_field('rep_specific_areas_text');
-
-                $associate_name = '';
-                $rep_title = '';
-                $contact_info_html = '';
-
-                if ($associate_type === 'wp_user') {
-                    $user_id = get_sub_field('rep_user');
-                    if ($user_id) {
-                        $user_data = get_userdata($user_id);
-                        if ($user_data) {
-                            $associate_name = $user_data->display_name;
-                            $rep_title = get_field('rep_title', 'user_' . $user_id);
-
-                            $email_override = get_sub_field('rep_contact_email_override');
-                            $phone_override = get_sub_field('rep_contact_phone_override');
-
-                            $phone_to_display = !empty($phone_override) ? $phone_override : get_field('rep_primary_phone', 'user_' . $user_data->ID);
-                            if (!empty($phone_to_display)) {
-                                $contact_info_html .= sprintf(
-                                    '<p class="rep-phone"><ion-icon name="call" role="img" class="hydrated" aria-label="call"></ion-icon> <strong>Phone:</strong> <a href="tel:%s">%s</a></p>',
-                                    esc_attr(preg_replace('/[^0-9+]/', '', $phone_to_display)),
-                                    esc_html($phone_to_display)
-                                );
-                            }
-
-                            $email_to_display = !empty($email_override) ? $email_override : ($user_data ? $user_data->user_email : '');
-                            if (!empty($email_to_display) && is_email($email_to_display)) {
-                                $contact_info_html .= sprintf(
-                                    '<p class="rep-email"><ion-icon name="mail" role="img" class="hydrated" aria-label="mail"></ion-icon> <strong>Email:</strong> <a href="mailto:%s">%s</a></p>',
-                                    esc_attr($email_to_display),
-                                    esc_html($email_to_display)
-                                );
-                            }
-                        } else {
-                            $associate_name = 'User Not Found';
+                    <?php
+                    // Area Served
+                    $area_served_terms = get_the_terms(get_the_ID(), 'area-served');
+                    if ($area_served_terms && !is_wp_error($area_served_terms)) : ?>
+                        <p><strong>Area Served:</strong> 
+                        <?php
+                        $area_names = array();
+                        foreach ($area_served_terms as $term) {
+                            $area_names[] = $term->name;
                         }
-                    }
-                } elseif ($associate_type === 'manual') {
-                    $associate_name = get_sub_field('manual_rep_name');
-                    $rep_title = get_sub_field('manual_rep_title');
-                    $associate_email = get_sub_field('manual_rep_email');
-                    $associate_phone = get_sub_field('manual_rep_phone');
-
-                    if (!empty($associate_phone)) {
-                        $contact_info_html .= sprintf(
-                            '<p class="rep-phone"><ion-icon name="call" role="img" class="hydrated" aria-label="call"></ion-icon> <strong>Phone:</strong> <a href="tel:%s">%s</a></p>',
-                            esc_attr(preg_replace('/[^0-9+]/', '', $associate_phone)),
-                            esc_html($associate_phone)
-                        );
-                    }
-                    if (!empty($associate_email) && is_email($associate_email)) {
-                        $contact_info_html .= sprintf(
-                            '<p class="rep-email"><ion-icon name="mail" role="img" class="hydrated" aria-label="mail"></ion-icon> <strong>Email:</strong> <a href="mailto:%s">%s</a></p>',
-                            esc_attr($associate_email),
-                            esc_html($associate_email)
-                        );
-                    }
-                }
-
-                if (empty(trim($associate_name))) continue;
-            ?>
-                <div class="rep-card">
-                    <h3 class="rep-name"><?php echo esc_html($associate_name); ?></h3>
-                    <?php if ($rep_title) : ?>
-                        <p class="rep-title"><em><?php echo esc_html($rep_title); ?></em></p>
+                        echo esc_html(implode(', ', $area_names));
+                        ?>
+                        </p>
                     <?php endif; ?>
-                    <?php if (!empty($associate_specific_areas_text)) : ?>
-                        <p class="rep-territory"><strong>Specific Areas:</strong> <?php echo esc_html($associate_specific_areas_text); ?></p>
-                    <?php endif; ?>
-                    <div class="rep-contact-info">
-                        <?php // This HTML is pre-escaped in the logic above ?>
-                        <?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                        <?php echo $contact_info_html; ?>
-                    </div>
+                </section>
+
+                <!-- Addresses -->
+                <?php
+                $address_container = get_field('rg_address_container');
+                if ($address_container) : ?>
+                    <section class="rep-address-section">
+                        <h2>Main Office</h2>
+                        <?php
+                        $address_parts = array();
+                        if ($address_container['rg_address_1']) $address_parts[] = $address_container['rg_address_1'];
+                        if ($address_container['rg_address_2']) $address_parts[] = $address_container['rg_address_2'];
+                        
+                        $location_parts = array();
+                        if ($address_container['rg_city']) $location_parts[] = $address_container['rg_city'];
+                        if ($address_container['rg_state']) $location_parts[] = $address_container['rg_state'];
+                        if ($address_container['rg_zip_code']) $location_parts[] = $address_container['rg_zip_code'];
+                        
+                        if (!empty($location_parts)) {
+                            $address_parts[] = implode(', ', $location_parts);
+                        }
+                        
+                        if (!empty($address_parts)) {
+                            echo '<p>' . esc_html(implode('<br>', $address_parts)) . '</p>';
+                        }
+                        ?>
+                    </section>
+                <?php endif; ?>
+
+                <?php
+                // Satellite Offices
+                $satellite_offices = get_field('satellite_offices');
+                if ($satellite_offices) : ?>
+                    <section class="rep-satellite-section">
+                        <h2>Additional Offices</h2>
+                        <?php foreach ($satellite_offices as $office) : ?>
+                            <div class="satellite-office">
+                                <h3><?php echo esc_html($office['office_name']); ?></h3>
+                                <?php if ($office['office_address']) : ?>
+                                    <?php
+                                    $office_address = $office['office_address'];
+                                    $office_parts = array();
+                                    if ($office_address['address_1']) $office_parts[] = $office_address['address_1'];
+                                    if ($office_address['address_2']) $office_parts[] = $office_address['address_2'];
+                                    
+                                    $office_location = array();
+                                    if ($office_address['city']) $office_location[] = $office_address['city'];
+                                    if ($office_address['state']) $office_location[] = $office_address['state'];
+                                    if ($office_address['zip_code']) $office_location[] = $office_address['zip_code'];
+                                    
+                                    if (!empty($office_location)) {
+                                        $office_parts[] = implode(', ', $office_location);
+                                    }
+                                    
+                                    if (!empty($office_parts)) {
+                                        echo '<p>' . esc_html(implode('<br>', $office_parts)) . '</p>';
+                                    }
+                                    ?>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </section>
+                <?php endif; ?>
+
+                <!-- Associates -->
+                <?php
+                $associates = get_field('rep_associates');
+                if ($associates) : ?>
+                    <section class="rep-associates-section">
+                        <h2>Team Members</h2>
+                        
+                        <?php foreach ($associates as $associate) : ?>
+                            <div class="associate-item">
+                                <?php
+                                $associate_type = $associate['associate_type'];
+                                
+                                if ($associate_type === 'wp_user') {
+                                    // WordPress User
+                                    $user_id = $associate['rep_user'];
+                                    if ($user_id) {
+                                        $user_data = get_userdata($user_id);
+                                        if ($user_data) {
+                                            echo '<h3>' . esc_html($user_data->display_name) . '</h3>';
+                                            
+                                            $user_title = get_field('rep_title', 'user_' . $user_id);
+                                            if ($user_title) {
+                                                echo '<p><strong>Title:</strong> ' . esc_html($user_title) . '</p>';
+                                            }
+                                            
+                                            $user_company = get_field('rep_company_name', 'user_' . $user_id);
+                                            if ($user_company) {
+                                                echo '<p><strong>Company:</strong> ' . esc_html($user_company) . '</p>';
+                                            }
+                                            
+                                            $user_phone = get_field('rep_primary_phone', 'user_' . $user_id);
+                                            if ($user_phone) {
+                                                echo '<p><strong>Phone:</strong> ' . esc_html($user_phone) . '</p>';
+                                            }
+                                            
+                                            if ($user_data->user_email) {
+                                                echo '<p><strong>Email:</strong> <a href="mailto:' . esc_attr($user_data->user_email) . '">' . esc_html($user_data->user_email) . '</a></p>';
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    // Manual Entry
+                                    $manual_name = $associate['manual_rep_name'];
+                                    if ($manual_name) {
+                                        echo '<h3>' . esc_html($manual_name) . '</h3>';
+                                        
+                                        $manual_title = $associate['manual_rep_title'];
+                                        if ($manual_title) {
+                                            echo '<p><strong>Title:</strong> ' . esc_html($manual_title) . '</p>';
+                                        }
+                                        
+                                        $manual_company = $associate['manual_rep_company'];
+                                        if ($manual_company) {
+                                            echo '<p><strong>Company:</strong> ' . esc_html($manual_company) . '</p>';
+                                        }
+                                        
+                                        $manual_email = $associate['manual_rep_email'];
+                                        if ($manual_email) {
+                                            echo '<p><strong>Email:</strong> <a href="mailto:' . esc_attr($manual_email) . '">' . esc_html($manual_email) . '</a></p>';
+                                        }
+                                        
+                                        $manual_phone = $associate['manual_rep_phone'];
+                                        if ($manual_phone) {
+                                            echo '<p><strong>Phone:</strong> ' . esc_html($manual_phone) . '</p>';
+                                        }
+                                    }
+                                }
+                                ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </section>
+                <?php endif; ?>
+
+                <!-- Back to Map -->
+                <div class="rep-group-navigation">
+                    <p><a href="/forbes-reps/" class="button">← Back to Interactive Map</a></p>
                 </div>
-            <?php endwhile; ?>
-            </div>
-        </div>
-    <?php endif; ?>
-</section> 
+
+            </div><!-- .entry-content -->
+        </article><!-- #post-## -->
+
+    <?php endwhile; ?>
+</main><!-- #primary -->
+
+<?php
+get_footer(); 
