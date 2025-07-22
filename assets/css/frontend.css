@@ -40,6 +40,10 @@ h3.rep-map-list-title {
     color: var(--text-color, #444444);
 }
 
+h5.rep-associate-name {
+    margin-bottom: 4px;
+}
+
 .rep-map-list-container {
     flex-grow: 1;
     overflow-y: auto;
@@ -402,11 +406,14 @@ ion-icon {
     flex-wrap: wrap; 
 }
 
-.rep-map-view-controls .rep-map-view-by-title,
+.rep-map-view-controls,
 h4.team-section-title {
-    margin-bottom: 0; 
     white-space: nowrap;
     font-size: 0.9em;
+}
+
+.rep-map-view-by-title {
+    margin-bottom: 0;
 }
 
 .view-by-select, 
@@ -419,8 +426,13 @@ h4.team-section-title {
     font-size: 0.9rem;
     cursor: pointer;
 }
+
 .view-by-select {
     padding-right: 26px;
+}
+
+select.view-by-select {
+    background-position: 90% 50% !important;
 }
 
 .view-by-select:hover,
@@ -435,6 +447,7 @@ h4.team-section-title {
     outline: 2px solid var(--color-primary, #29317d);
     outline-offset: 1px;
     border-color: var(--color-primary, #29317d);
+    background-color: inherit;
 }
 
 .sort-toggle-button {
