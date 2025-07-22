@@ -399,10 +399,10 @@ ion-icon {
 }
 
 .rep-map-view-controls .rep-map-view-by-title,
-.team-section-title {
+h4.team-section-title {
     margin-bottom: 0; 
     white-space: nowrap;
-    font-size: 0.8em;
+    font-size: 0.9em;
 }
 
 .view-by-select, 
