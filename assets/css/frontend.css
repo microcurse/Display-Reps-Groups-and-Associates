@@ -398,9 +398,11 @@ ion-icon {
     flex-wrap: wrap; 
 }
 
-.rep-map-view-controls .rep-map-view-by-title {
+.rep-map-view-controls .rep-map-view-by-title,
+.team-section-title {
     margin-bottom: 0; 
     white-space: nowrap;
+    font-size: 0.8em;
 }
 
 .view-by-select, 
